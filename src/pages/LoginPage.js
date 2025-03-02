@@ -9,6 +9,7 @@ import {
   Link,
   InputAdornment,
   IconButton,
+  MenuItem,
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Visibility from '@mui/icons-material/Visibility';
@@ -17,16 +18,17 @@ import Header from '../components/Header';
 import Footer from '../components/footer';
 import { useAuth } from '../context/AuthContext';
 
-const CustomerLogin = () => {
+const Login = () => {
   const [formData, setFormData] = useState({
     emailAddress: '',
     password: '',
+    role: 'customer' // Default role
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,15 +41,17 @@ const CustomerLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await login(formData, 'customer');
-      navigate('/customer-dashboard');
+      await login(formData);
+      // Redirect based on role
+      const dashboardRoutes = {
+        customer: '/customer-dashboard',
+        serviceProvider: '/service-provider-dashboard',
+        admin: '/admin-dashboard'
+      };
+      navigate(dashboardRoutes[formData.role]);
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     }
-  };
-
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
   };
 
   return (
@@ -62,101 +66,89 @@ const CustomerLogin = () => {
           fontWeight="bold"
           sx={{ mb: 4 }}
         >
-          Welcome to Customer Login
+          Welcome to BeautiQ
         </Typography>
         
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            borderRadius: '30px',
-            border: '1px solid rgba(0, 0, 0, 0.12)',
-            mx: 'auto',
-            width: '100%',
-            maxWidth: '600px',
-            bgcolor: 'background.paper',
-          }}
-        >
+        <Paper elevation={0} sx={{ p: 4, maxWidth: '600px', mx: 'auto', borderRadius: '30px', border: '1px solid rgba(0, 0, 0, 0.12)' }}>
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+            {error && (
+              <Typography color="error" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+            )}
+
             <TextField
-              margin="normal"
-              required
+              select
               fullWidth
-              id="emailAddress"
+              label="Login As"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              margin="normal"
+              sx={{ mb: 2 }}
+            >
+              <MenuItem value="customer">Customer</MenuItem>
+              <MenuItem value="serviceProvider">Service Provider</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+            </TextField>
+
+            <TextField
+              fullWidth
+              required
               label="Email Address"
               name="emailAddress"
-              placeholder="example@gmail.com"
+              type="email"
               value={formData.emailAddress}
               onChange={handleChange}
-              variant="outlined"
-              sx={{ mb: 3 }}
-              type="email"
+              sx={{ mb: 2 }}
             />
-            
+
             <TextField
-              margin="normal"
-              required
               fullWidth
-              id="password"
+              required
               label="Password"
               name="password"
-              placeholder="Enter your password"
+              type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={handleChange}
-              variant="outlined"
-              sx={{ mb: 2 }}
-              type={showPassword ? 'text' : 'password'}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
+                      onClick={() => setShowPassword(!showPassword)}
                       edge="end"
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Link component={RouterLink} to="/customer-forgot-password" variant="body2">
+
+            <Box sx={{ mt: 2, mb: 2, textAlign: 'right' }}>
+              <Link component={RouterLink} to="/forgot-password">
                 Forgot Password?
               </Link>
             </Box>
-            
+
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{
-                mt: 1,
-                mb: 2,
-                py: 1.5,
-                bgcolor: '#1976d2',
-                color: 'white',
-                borderRadius: '4px',
-                '&:hover': {
-                  bgcolor: '#1565c0',
-                }
-              }}
+              sx={{ mt: 2, mb: 2 }}
             >
               Login
             </Button>
-            
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Typography variant="body2">
-                Don't have an account?{' '}
-                <Link component={RouterLink} to="/customer-register" sx={{ textDecoration: 'none' }}>
-                  Register here
-                </Link>
-              </Typography>
-            </Box>
+
+            <Typography align="center">
+              Don't have an account?{' '}
+              <Link 
+                component={RouterLink} 
+                to={`/${formData.role === 'customer' ? 'customer' : formData.role === 'serviceProvider' ? 'service-provider' : 'admin'}-register`}
+              >
+                Register here
+              </Link>
+            </Typography>
           </Box>
         </Paper>
       </Container>
@@ -165,4 +157,4 @@ const CustomerLogin = () => {
   );
 };
 
-export default CustomerLogin;
+export default Login;

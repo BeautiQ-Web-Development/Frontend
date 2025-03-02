@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -6,187 +6,121 @@ import {
   Typography,
   Paper,
   Container,
-  Link,
   InputAdornment,
   IconButton,
 } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { resetPassword } from '../services/auth';
 import Header from '../components/Header';
 import Footer from '../components/footer';
 
 const ResetPassword = () => {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
+  const location = useLocation();
+  
+  // Get reset token from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const resetToken = queryParams.get('token');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-    
-    // Clear error when user types
-    if (passwordError && name === 'confirmPassword') {
-      setPasswordError('');
-    }
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate passwords match
-    if (formData.newPassword !== formData.confirmPassword) {
-      setPasswordError('Passwords do not match');
+    if (!resetToken) {
+      setError('Invalid reset token');
       return;
     }
-    
-    // In a real application, this would send a request to your backend
-    console.log('Password reset confirmed:', formData);
-    
-    // Redirect to login page after successful password reset
-    navigate('/login');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const response = await resetPassword(resetToken, newPassword);
+      if (response.success) {
+        alert('Password reset successful!');
+        navigate('/customer-login');
+      } else {
+        setError(response.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      console.error('Reset password error:', err);
+      setError(err.message || 'Failed to reset password. Please try again.');
+    }
   };
 
-  const handleClickShowNewPassword = () => {
-    setShowNewPassword(!showNewPassword);
-  };
-
-  const handleClickShowConfirmPassword = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
+  // Add validation for token presence
+  useEffect(() => {
+    if (!resetToken) {
+      setError('Invalid or missing reset token');
+    }
+  }, [resetToken]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
       <Container component="main" maxWidth="md" sx={{ flexGrow: 1, py: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          align="center"
-          color="primary"
-          fontWeight="bold"
-          sx={{ mb: 4 }}
-        >
-          To Reset your Password
-        </Typography>
-        
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            borderRadius: '30px',
-            border: '1px solid rgba(0, 0, 0, 0.12)',
-            mx: 'auto',
-            width: '100%',
-            maxWidth: '600px',
-            bgcolor: 'background.paper',
-          }}
-        >
-          <Typography
-            variant="h5"
-            component="h2"
-            align="center"
-            color="primary"
-            fontWeight="bold"
-            sx={{ mb: 4 }}
-          >
-            Forgot Password
+        <Paper elevation={3} sx={{ p: 4, mt: 2 }}>
+          <Typography variant="h5" component="h1" gutterBottom>
+            Reset Password
           </Typography>
           
-          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+          <Box component="form" onSubmit={handleSubmit}>
             <TextField
-              margin="normal"
-              required
               fullWidth
-              id="newPassword"
+              margin="normal"
               label="New Password"
-              name="newPassword"
-              placeholder="Enter your new password"
-              value={formData.newPassword}
-              onChange={handleChange}
-              variant="outlined"
-              sx={{ mb: 3 }}
-              type={showNewPassword ? 'text' : 'password'}
+              type={showPassword ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label="toggle new password visibility"
-                      onClick={handleClickShowNewPassword}
+                      onClick={() => setShowPassword(!showPassword)}
                       edge="end"
                     >
-                      {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
             
             <TextField
-              margin="normal"
-              required
               fullWidth
-              id="confirmPassword"
+              margin="normal"
               label="Confirm Password"
-              name="confirmPassword"
-              placeholder="Renter your new password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              variant="outlined"
-              sx={{ mb: 2 }}
-              type={showConfirmPassword ? 'text' : 'password'}
-              error={Boolean(passwordError)}
-              helperText={passwordError}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle confirm password visibility"
-                      onClick={handleClickShowConfirmPassword}
-                      edge="end"
-                    >
-                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
+              type={showPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
             />
+            
+            {error && (
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
             
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{
-                mt: 3,
-                mb: 2,
-                py: 1.5,
-                bgcolor: '#1976d2', // Changed to Material-UI default blue
-                color: 'white',     // Changed text color to white
-                borderRadius: '20px',
-                '&:hover': {
-                  bgcolor: '#1565c0', // Darker blue on hover
-                }
-              }}
+              sx={{ mt: 3 }}
             >
-              Update Password
+              Reset Password
             </Button>
-            
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Link component={RouterLink} to="/login" sx={{ textDecoration: 'none' }}>
-                Do you want to Login?
-              </Link>
-            </Box>
           </Box>
         </Paper>
       </Container>

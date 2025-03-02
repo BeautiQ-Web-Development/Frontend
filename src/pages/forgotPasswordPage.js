@@ -9,24 +9,32 @@ import {
   Link,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import { requestPasswordReset } from '../services/auth';
 import Header from '../components/Header';
 import Footer from '../components/footer';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setEmail(e.target.value);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real application, this would send a request to your backend
-    console.log('Password reset requested for:', email);
-    // Simulate successful submission
-    setIsSubmitted(true);
-    // In a real app, you would handle API call here
+    try {
+      const response = await requestPasswordReset(email);
+      setMessage('If an account exists with this email, you will receive a password reset link.');
+      setError('');
+      
+      // In development, you can use the reset token directly
+      console.log('Reset token:', response.resetToken);
+    } catch (err) {
+      setError(err.message || 'Failed to request password reset');
+      setMessage('');
+    }
   };
 
   return (
@@ -110,14 +118,25 @@ const ForgotPassword = () => {
               Continue
             </Button>
             
-            {isSubmitted && (
+            {message && (
               <Typography 
                 variant="body2" 
                 align="center" 
-                color="success.main" 
+                color="primary" 
                 sx={{ mt: 2 }}
               >
-                Password reset link has been sent to your email!
+                {message}
+              </Typography>
+            )}
+            
+            {error && (
+              <Typography 
+                variant="body2" 
+                align="center" 
+                color="error" 
+                sx={{ mt: 2 }}
+              >
+                {error}
               </Typography>
             )}
           </Box>

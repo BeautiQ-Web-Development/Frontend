@@ -9,13 +9,17 @@ import {
   Link,
   InputAdornment,
   IconButton,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Header from '../components/Header';
 import Footer from '../components/footer';
 import PersonIcon from '@mui/icons-material/Person';
+import { register } from '../services/auth';
+import SuccessDialog from '../components/SuccessDialog';
 
 const CustomerRegister = () => {
   const [formData, setFormData] = useState({
@@ -25,11 +29,15 @@ const CustomerRegister = () => {
     mobileNumber: '',
     newPassword: '',
     confirmPassword: '',
+    agreeToTerms: false 
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [openDialog, setOpenDialog] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,18 +52,36 @@ const CustomerRegister = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate passwords match
+    if (!formData.agreeToTerms) {
+      alert('You must agree to the terms and conditions');
+      return;
+    }
+
     if (formData.newPassword !== formData.confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
     }
-    
-    // Handle form submission logic here
-    console.log('Customer registration form submitted:', formData);
-    // Add API call to register the customer
+
+    try {
+      const userData = {
+        fullName: formData.fullName,
+        currentAddress: formData.currentAddress,
+        emailAddress: formData.emailAddress,
+        mobileNumber: formData.mobileNumber,
+        password: formData.newPassword
+      };
+
+      const response = await register(userData, 'customer');
+      console.log('Registration successful:', response);
+      setOpenDialog(true);
+      // Dialog will automatically redirect after closing
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert(error.message || 'Registration failed. Please try again.');
+    }
   };
 
   const handleClickShowPassword = () => {
@@ -64,6 +90,11 @@ const CustomerRegister = () => {
 
   const handleClickShowConfirmPassword = () => {
     setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+    navigate('/customer-login');
   };
 
   return (
@@ -230,25 +261,42 @@ const CustomerRegister = () => {
                 )
               }}
             />
+               <FormControlLabel
+        control={
+          <Checkbox
+            checked={formData.agreeToTerms}
+            onChange={handleChange}
+            name="agreeToTerms"
+            color="primary"
+          />
+        }
+        label={
+          <Typography variant="body2">
+            I agree to the Privacy Policy, Terms of Services & Teams of Business
+          </Typography>
+        }
+        sx={{ mb: 3 }}
+      />
             
             <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{
-                mt: 1,
-                mb: 2,
-                py: 1.5,
-                bgcolor: 'black',
-                color: 'white',
-                borderRadius: '4px',
-                '&:hover': {
-                  bgcolor: '#333',
-                }
-              }}
-            >
-              Register
-            </Button>
+        type="submit"
+        fullWidth
+        variant="contained"
+        disabled={!formData.agreeToTerms} // Add this line to disable button if terms not accepted
+        sx={{
+          mt: 1,
+          mb: 2,
+          py: 1.5,
+          bgcolor: 'black',
+          color: 'white',
+          borderRadius: '4px',
+          '&:hover': {
+            bgcolor: '#333',
+          }
+        }}
+      >
+        Register
+      </Button>
             
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2">
@@ -262,6 +310,11 @@ const CustomerRegister = () => {
         </Paper>
       </Container>
       <Footer />
+      <SuccessDialog
+        open={openDialog}
+        message="Account created successfully! You will be redirected to login."
+        onClose={handleDialogClose}
+      />
     </Box>
   );
 };
