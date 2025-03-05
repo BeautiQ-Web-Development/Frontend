@@ -9,20 +9,27 @@ import {
   Link,
   InputAdornment,
   IconButton,
+  Alert,
+  Snackbar
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/footer';
 
 const ServiceProviderLogin = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     emailAddress: '',
     password: '',
   });
-
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [pendingApproval, setPendingApproval] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,15 +39,47 @@ const ServiceProviderLogin = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log('Service Provider login form submitted:', formData);
-    // Add API call to log in the service provider
+    setError('');
+    setPendingApproval(false);
+    setLoading(true);
+
+    try {
+      const response = await login({
+        emailAddress: formData.emailAddress,
+        password: formData.password,
+        role: 'serviceProvider'  // Always specify role
+      });
+
+      // Check the response
+      if (response.user.approved) {
+        navigate('/service-provider-dashboard');
+      } else {
+        setPendingApproval(true);
+        setSnackbarOpen(true);
+      }
+    } catch (err) {
+      console.error('Login attempt failed:', err);
+      
+      if (err.pendingApproval) {
+        setPendingApproval(true);
+        setError('Your account is pending approval.');
+      } else {
+        setError(err.message || 'Invalid credentials. Please try again.');
+      }
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
+    setShowPassword((prev) => !prev);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -73,6 +112,15 @@ const ServiceProviderLogin = () => {
             bgcolor: 'background.paper',
           }}
         >
+          {pendingApproval && (
+            <Alert 
+              severity="info" 
+              sx={{ width: '100%', mb: 3 }}
+            >
+              Your account is pending admin approval. You will be notified once approved.
+            </Alert>
+          )}
+          
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField
               margin="normal"
@@ -127,6 +175,7 @@ const ServiceProviderLogin = () => {
               type="submit"
               fullWidth
               variant="contained"
+              disabled={loading}
               sx={{
                 mt: 1,
                 mb: 2,
@@ -139,7 +188,7 @@ const ServiceProviderLogin = () => {
                 }
               }}
             >
-              Login
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
             
             <Box sx={{ textAlign: 'center', mt: 2 }}>
@@ -152,6 +201,23 @@ const ServiceProviderLogin = () => {
             </Box>
           </Box>
         </Paper>
+        
+        <Snackbar 
+          open={snackbarOpen} 
+          autoHideDuration={6000} 
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={handleCloseSnackbar} 
+            severity={pendingApproval ? "info" : "error"} 
+            sx={{ width: '100%' }}
+          >
+            {pendingApproval 
+              ? "Your account is pending admin approval. You will be notified once approved." 
+              : error}
+          </Alert>
+        </Snackbar>
       </Container>
       <Footer />
     </Box>
