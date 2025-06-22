@@ -6,9 +6,10 @@ import {
   Typography,
   Paper,
   Container,
-  Link,
+  Alert,
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
 import { requestPasswordReset } from '../services/auth';
 import Header from '../components/Header';
 import Footer from '../components/footer';
@@ -17,6 +18,8 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const handleChange = (e) => {
     setEmail(e.target.value);
@@ -24,17 +27,26 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await requestPasswordReset(email);
       setMessage('If an account exists with this email, you will receive a password reset link.');
       setError('');
+      setOpenSnackbar(true);
       
       // In development, you can use the reset token directly
       console.log('Reset token:', response.resetToken);
     } catch (err) {
       setError(err.message || 'Failed to request password reset');
       setMessage('');
+      setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   return (
@@ -98,8 +110,7 @@ const ForgotPassword = () => {
               After Click on the Continue Button, You will be received a reset password link on your email
               Click and you can change the password!!!
             </Typography>
-            
-            <Button
+              <Button
               type="submit"
               fullWidth
               variant="contained"
@@ -107,38 +118,43 @@ const ForgotPassword = () => {
                 mt: 1,
                 mb: 2,
                 py: 1.5,
-                bgcolor: '#1976d2', // Changed to Material-UI default blue
-                color: 'white',     // Changed text color to white
-                borderRadius: '20px',
+                bgcolor: '#075B5E', // Deep teal
+                color: 'white',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                fontSize: '1rem',
                 '&:hover': {
-                  bgcolor: '#1565c0', // Darker blue on hover
-                }
+                  bgcolor: '#054548', // Darker teal
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 8px 25px rgba(7, 91, 94, 0.3)',
+                },
+                '&:disabled': {
+                  bgcolor: '#B0BEC5',
+                  color: '#FFFFFF',
+                },
+                transition: 'all 0.3s ease'
               }}
+              disabled={loading}
             >
-              Continue
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Continue'}
             </Button>
             
-            {message && (
-              <Typography 
-                variant="body2" 
-                align="center" 
-                color="primary" 
-                sx={{ mt: 2 }}
-              >
-                {message}
-              </Typography>
-            )}
-            
-            {error && (
-              <Typography 
-                variant="body2" 
-                align="center" 
-                color="error" 
-                sx={{ mt: 2 }}
-              >
-                {error}
-              </Typography>
-            )}
+            <Snackbar
+              open={openSnackbar}
+              autoHideDuration={6000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+              {error ? (
+                <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+                  {error}
+                </Alert>
+              ) : (
+                <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+                  {message}
+                </Alert>
+              )}
+            </Snackbar>
           </Box>
         </Paper>
       </Container>

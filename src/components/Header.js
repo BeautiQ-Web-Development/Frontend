@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import {
   AppBar,
-  Box,
   Button,
   Container,
   IconButton,
@@ -11,99 +10,88 @@ import {
   MenuItem,
   Toolbar,
   Typography,
-  styled,
+  Box,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import { Menu as MenuIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-// Styled components
-const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  background: 'transparent',
-  boxShadow: 'none',
-  position: 'static',
-}));
-
-const LogoTypography = styled(Typography)(({ theme }) => ({
-  fontWeight: 'bold',
-  color: theme.palette.common.black,
-  marginRight: 'auto',
-}));
-
 const Header = () => {
-  const [anchorElNav, setAnchorElNav] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
 
-  const handleOpenNavMenu = (event) => {
-    setAnchorElNav(event.currentTarget);
+  const handleMenuClick = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
-  const menuItems = [
-    { text: 'Admin Register', path: '/register' },
-    { text: 'Admin Log In', path: '/login' },
-    { text: 'Customer Support', path: '/support' },
-  ];
+  const handleNavigation = (path) => {
+    navigate(path);
+    handleMenuClose();
+  };
 
   return (
-    <StyledAppBar>
-      <Container>
-        <Toolbar disableGutters>
-          {/* Logo */}
-          <LogoTypography variant="h5" component="div">
+    <AppBar position="static" sx={{ backgroundColor: '#075B5E' }}>
+      <Container maxWidth="lg">
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ fontWeight: 'bold' }}
+            onClick={() => navigate('/')}
+            style={{ cursor: 'pointer' , color: '#FFFFFF' }}
+          >
             BeautiQ
-          </LogoTypography>
+          </Typography>
 
-          {/* For Customer Button */}
-          <Button
-            variant="contained"
-            onClick={() => navigate('/customer-login')}
-            sx={{ ml: 2 }}
-          >
-            For Customer
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/')}
+            >
+              Home
+            </Button>
+            
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/customer-login')}
+            >
+              Customer Login
+            </Button>
+            
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/service-provider-login')}
+            >
+              Service Provider Login
+            </Button>
 
-          {/* For Service Provider Button */}
-          <Button
-            variant="contained"
-            onClick={() => navigate('/service-provider-login')}
-            sx={{ ml: 2 }}
-          >
-            For Service Provider
-          </Button>
+            <Button
+              color="inherit"
+              onClick={handleMenuClick}
+            >
+              Admin
+            </Button>
+          </Box>
 
-          {/* Menu Icon */}
-          <IconButton
-            size="large"
-            aria-label="menu"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            onClick={handleOpenNavMenu}
-            color="inherit"
-            sx={{ marginLeft: 2 }} // Add margin to the left
-          >
-            <MenuIcon />
-          </IconButton>
-
-          {/* Menu Items */}
           <Menu
-            id="menu-appbar"
-            anchorEl={anchorElNav}
-            keepMounted
-            open={Boolean(anchorElNav)}
-            onClose={handleCloseNavMenu}
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            style={{ cursor: 'pointer' , color: '#FFFFFF' , borderRadius: '8px' , borderColor: '#075B5E' }}
           >
-            {menuItems.map((item, index) => (
-              <MenuItem key={index} onClick={() => navigate(item.path)}>
-                <Typography textAlign="center">{item.text}</Typography>
-              </MenuItem>
-            ))}
+            <MenuItem onClick={() => handleNavigation('/login')}>
+              Admin Login
+            </MenuItem>
+            <MenuItem onClick={() => handleNavigation('/admin-register')}>
+              Admin Register
+            </MenuItem>
           </Menu>
         </Toolbar>
       </Container>
-    </StyledAppBar>
+    </AppBar>
   );
 };
 

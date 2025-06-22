@@ -1,426 +1,527 @@
-// import React, { useEffect, useState } from 'react';
-// import { Box, Typography, Container } from '@mui/material';
-// import { useAuth } from '../context/AuthContext';
-// import Header from '../components/Header';
-// import Footer from '../components/footer';
-
-// const AdminDashboard = () => {
-//   const { user } = useAuth();
-//   const [dashboardData, setDashboardData] = useState(null);
-
-//   useEffect(() => {
-//     const fetchDashboardData = async () => {
-//       try {
-//         const response = await fetch('http://localhost:5000/api/admin/dashboard', {
-//           method: 'GET',
-//           headers: {
-//             'Authorization': `Bearer ${user.token}`,
-//             'Content-Type': 'application/json'
-//           }
-//         });
-        
-//         if (response.ok) {
-//           const data = await response.json();
-//           setDashboardData(data);
-//         }
-//       } catch (error) {
-//         console.error('Error fetching dashboard data:', error);
-//       }
-//     };
-
-//     if (user?.token) {
-//       fetchDashboardData();
-//     }
-//   }, [user]);
-
-//   return (
-//     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-//       <Header />
-//       <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
-//         <Typography variant="h4" component="h1" gutterBottom>
-//           Admin Dashboard
-//         </Typography>
-//         {dashboardData && (
-//           // Display dashboard data here
-//           <Box>
-//             {/* Add your dashboard content */}
-//           </Box>
-//         )}
-//       </Container>
-//       <Footer />
-//     </Box>
-//   );
-// };
-
-// export default AdminDashboard;
-
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Typography,
   Container,
-  Paper,
-  Button,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Card,
-  CardContent,
-  Grid,
-  Chip,
-  IconButton,
-  Alert,
-  Snackbar,
+  Paper,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
-  AppBar,
-  Toolbar
+  Avatar,
+  Chip,
+  Alert,
+  CircularProgress,
+  IconButton
 } from '@mui/material';
-import { 
-  CheckCircle as ApproveIcon, 
-  Cancel as RejectIcon,
-  Notifications as NotificationIcon,
-  Dashboard as DashboardIcon,
+import {
   People as PeopleIcon,
   Store as StoreIcon,
-  Logout as LogoutIcon
+  Notifications as NotificationsIcon,
+  Dashboard as DashboardIcon,
+  Visibility as VisibilityIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon
 } from '@mui/icons-material';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { 
+  getPendingProviders, 
+  getApprovedProviders, 
+  getUserCounts,
+  approveServiceProvider 
+} from '../services/auth';
 import Header from '../components/Header';
 import Footer from '../components/footer';
 
+const TabPanel = ({ children, value, index, ...other }) => (
+  <div
+    role="tabpanel"
+    hidden={value !== index}
+    id={`simple-tabpanel-${index}`}
+    aria-labelledby={`simple-tab-${index}`}
+    {...other}
+  >
+    {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+  </div>
+);
+
+const ProviderDetailsDialog = ({ open, onClose, provider, onApprove }) => {
+  if (!provider) {
+    return null; // Don't render if provider is undefined
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        <Typography variant="h6" sx={{ color: '#075B5E', fontWeight: 'bold' }}>
+          Service Provider Details
+        </Typography>
+      </DialogTitle>
+      <DialogContent>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Business Information
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Business Name:</strong> {provider.businessName || 'N/A'}
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Owner Name:</strong> {provider.fullName || 'N/A'}
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Email:</strong> {provider.emailAddress || 'N/A'}
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Phone:</strong> {provider.phoneNumber || 'N/A'}
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Address:</strong> {provider.address || 'N/A'}
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Professional Details
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Experience:</strong> {provider.experience?.years || 'N/A'} years
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Specialties:</strong> {provider.specialties?.join(', ') || 'N/A'}
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              <strong>Languages:</strong> {provider.languages?.join(', ') || 'N/A'}
+            </Typography>
+          </Grid>
+
+          {/* Documents Section */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Uploaded Documents
+            </Typography>
+            <Grid container spacing={2}>
+              {provider.profilePhoto && (
+                <Grid item xs={6} md={3}>
+                  <Box>
+                    <Typography variant="caption" display="block">Profile Photo</Typography>
+                    <img 
+                      src={provider.profilePhoto} 
+                      alt="Profile" 
+                      style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 8 }}
+                    />
+                  </Box>
+                </Grid>
+              )}
+              {provider.nicFrontPhoto && (
+                <Grid item xs={6} md={3}>
+                  <Box>
+                    <Typography variant="caption" display="block">NIC Front</Typography>
+                    <img 
+                      src={provider.nicFrontPhoto} 
+                      alt="NIC Front" 
+                      style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 8 }}
+                    />
+                  </Box>
+                </Grid>
+              )}
+              {provider.nicBackPhoto && (
+                <Grid item xs={6} md={3}>
+                  <Box>
+                    <Typography variant="caption" display="block">NIC Back</Typography>
+                    <img 
+                      src={provider.nicBackPhoto} 
+                      alt="NIC Back" 
+                      style={{ width: '100%', maxHeight: 150, objectFit: 'cover', borderRadius: 8 }}
+                    />
+                  </Box>
+                </Grid>
+              )}
+            </Grid>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">
+          Close
+        </Button>
+        <Button 
+          onClick={() => onApprove(provider._id)} 
+          variant="contained"
+          sx={{ 
+            backgroundColor: '#075B5E',
+            '&:hover': { backgroundColor: '#054548' }
+          }}
+        >
+          Approve Provider
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const AdminDashboard = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const [customerCount, setCustomerCount] = useState(0);
+  const [serviceProviderCount, setServiceProviderCount] = useState(0);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
+  const [totalUserCount, setTotalUserCount] = useState(0);
   const [pendingProviders, setPendingProviders] = useState([]);
   const [approvedProviders, setApprovedProviders] = useState([]);
-  const [customers, setCustomers] = useState([]);
+  const [userCounts, setUserCounts] = useState({
+    customers: 0,
+    serviceProviders: 0,
+    pendingApprovals: 0,
+    totalUsers: 0
+  });
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  
-  // Fetch pending service providers
+  const [tabValue, setTabValue] = useState(0);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token') || (user && user.token);
-        
-        // Fetch pending service providers
-        const pendingRes = await axios.get('http://localhost:5000/api/auth/pending-providers', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        setPendingProviders(pendingRes.data.pendingProviders || []);
-        
-        // Fetch other data (if needed)
-        // For demo purposes, we'll use mock data
-        setApprovedProviders([
-          { _id: '1', fullName: 'Jane Doe Salon', businessName: 'JD Beauty', emailAddress: 'jane@example.com' },
-          { _id: '2', fullName: 'Mike Smith', businessName: 'Mike\'s Barber Shop', emailAddress: 'mike@example.com' }
-        ]);
-        
-        setCustomers([
-          { _id: '1', fullName: 'John Customer', emailAddress: 'john@example.com' },
-          { _id: '2', fullName: 'Alice User', emailAddress: 'alice@example.com' },
-          { _id: '3', fullName: 'Bob Client', emailAddress: 'bob@example.com' }
-        ]);
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to fetch data. Please try again.');
-        setSnackbarOpen(true);
-        setLoading(false);
-      }
-    };
-    
     fetchData();
-  }, [user]);
-  
-  const handleApprove = (provider) => {
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Fetch user counts
+      try {
+        const countsResponse = await getUserCounts();
+        console.log('User counts response:', countsResponse);
+        if (countsResponse.success && countsResponse.data) {
+          setUserCounts(countsResponse.data);
+          setCustomerCount(countsResponse.data.customers || 0);
+          setServiceProviderCount(countsResponse.data.serviceProviders || 0);
+          setPendingApprovalCount(countsResponse.data.pendingProviders || 0);
+          setTotalUserCount(countsResponse.data.totalUsers || 0);
+        }
+      } catch (countsError) {
+        console.error('User counts endpoint not available:', countsError.message);
+        // Keep default values if endpoint fails
+      }
+
+      // Fetch pending providers
+      try {
+        const pendingResponse = await getPendingProviders();
+        console.log('Pending providers response:', pendingResponse);
+        if (pendingResponse.success && pendingResponse.data) {
+          setPendingProviders(pendingResponse.data);
+          // Update pending count if user counts failed
+          setPendingApprovalCount(pendingResponse.data.length);
+          setUserCounts(prev => ({
+            ...prev,
+            pendingApprovals: pendingResponse.data.length
+          }));
+        }
+      } catch (pendingError) {
+        console.error('Error fetching pending providers:', pendingError);
+      }
+
+      // Fetch approved providers
+      try {
+        const approvedResponse = await getApprovedProviders();
+        console.log('Approved providers response:', approvedResponse);
+        if (approvedResponse.success && approvedResponse.data) {
+          setApprovedProviders(approvedResponse.data);
+          // Update service providers count if user counts failed
+          setServiceProviderCount(approvedResponse.data.length);
+          setUserCounts(prev => ({
+            ...prev,
+            serviceProviders: approvedResponse.data.length
+          }));
+        }
+      } catch (approvedError) {
+        console.error('Error fetching approved providers:', approvedError);
+      }
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveProvider = async (providerId) => {
+    try {
+      await approveServiceProvider(providerId);
+      
+      // Move provider from pending to approved
+      const approvedProvider = pendingProviders.find(p => p._id === providerId);
+      if (approvedProvider) {
+        setPendingProviders(prev => prev.filter(p => p._id !== providerId));
+        setApprovedProviders(prev => [...prev, { ...approvedProvider, approved: true }]);
+        
+        // Update counts
+        setPendingApprovalCount(prev => prev - 1);
+        setServiceProviderCount(prev => prev + 1);
+        setUserCounts(prev => ({
+          ...prev,
+          pendingApprovals: prev.pendingApprovals - 1,
+          serviceProviders: prev.serviceProviders + 1
+        }));
+      }
+      
+      setDialogOpen(false);
+      setSelectedProvider(null);
+    } catch (error) {
+      console.error('Error approving provider:', error);
+      setError('Failed to approve provider');
+    }
+  };
+
+  const handleViewProvider = (provider) => {
     setSelectedProvider(provider);
     setDialogOpen(true);
   };
-  
-  const confirmApproval = async () => {
-    try {
-      const token = localStorage.getItem('token') || (user && user.token);
-      
-      await axios.put(
-        `http://localhost:5000/api/auth/approve-provider/${selectedProvider._id}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      
-      // Update state to remove from pending
-      setPendingProviders(prevProviders => 
-        prevProviders.filter(p => p._id !== selectedProvider._id)
-      );
-      
-      // Add to approved providers
-      setApprovedProviders(prevProviders => [...prevProviders, selectedProvider]);
-      
-      setSuccess(`${selectedProvider.businessName || selectedProvider.fullName} has been approved successfully!`);
-      setSnackbarOpen(true);
-      setDialogOpen(false);
-    } catch (err) {
-      console.error('Error approving provider:', err);
-      setError('Failed to approve provider. Please try again.');
-      setSnackbarOpen(true);
-      setDialogOpen(false);
-    }
-  };
-  
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-  
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-  
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
-  
+
+  const StatCard = ({ title, value, icon, color = 'primary' }) => (
+    <Card sx={{ minHeight: 120 }}>
+      <CardContent>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box>
+            <Typography color="text.secondary" gutterBottom variant="h6">
+              {title}
+            </Typography>
+            <Typography variant="h3" component="div" color={`${color}.main`}>
+              {loading ? <CircularProgress size={40} /> : value}
+            </Typography>
+          </Box>
+          <Avatar sx={{ bgcolor: `${color}.main`, width: 56, height: 56 }}>
+            {icon}
+          </Avatar>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Custom AppBar with Logout */}
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            BeautiQ Admin Dashboard
-          </Typography>
-          <Button 
-            color="inherit" 
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-          >
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <Header />
       
       <Container component="main" maxWidth="lg" sx={{ flexGrow: 1, py: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" sx={{ mb: 4 }}>
-          Welcome, {user?.fullName || 'Admin'}
+        <Typography variant="h4" component="h1" gutterBottom color="primary" fontWeight="bold">
+          Welcome, Admin Dashboard
         </Typography>
-        
-        {/* Dashboard Summary */}
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: '#e3f2fd', height: '100%' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" component="div">
-                    Customers
-                  </Typography>
-                  <PeopleIcon color="primary" />
-                </Box>
-                <Typography variant="h3" component="div" sx={{ mt: 2 }}>
-                  {customers.length}
-                </Typography>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Customers"
+              value={userCounts.customers}
+              icon={<PeopleIcon />}
+              color="primary"
+            />
           </Grid>
-          
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: '#e8f5e9', height: '100%' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" component="div">
-                    Service Providers
-                  </Typography>
-                  <StoreIcon color="success" />
-                </Box>
-                <Typography variant="h3" component="div" sx={{ mt: 2 }}>
-                  {approvedProviders.length}
-                </Typography>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Service Providers"
+              value={userCounts.serviceProviders}
+              icon={<StoreIcon />}
+              color="success"
+            />
           </Grid>
-          
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: '#fff8e1', height: '100%' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" component="div">
-                    Pending Approvals
-                  </Typography>
-                  <NotificationIcon color="warning" />
-                </Box>
-                <Typography variant="h3" component="div" sx={{ mt: 2 }}>
-                  {pendingProviders.length}
-                </Typography>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Pending Approvals"
+              value={userCounts.pendingApprovals}
+              icon={<NotificationsIcon />}
+              color="warning"
+            />
           </Grid>
-          
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: '#f3e5f5', height: '100%' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" component="div">
-                    Total Users
-                  </Typography>
-                  <DashboardIcon color="secondary" />
-                </Box>
-                <Typography variant="h3" component="div" sx={{ mt: 2 }}>
-                  {customers.length + approvedProviders.length}
-                </Typography>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Total Users"
+              value={userCounts.totalUsers}
+              icon={<DashboardIcon />}
+              color="info"
+            />
           </Grid>
         </Grid>
-        
-        {/* Pending Approvals Section */}
-        <Typography variant="h5" sx={{ mb: 2, mt: 4 }}>
-          Pending Service Provider Approvals
-        </Typography>
-        
-        {pendingProviders.length === 0 ? (
-          <Paper sx={{ p: 3, mb: 4 }}>
-            <Typography variant="body1">No pending approvals at this time.</Typography>
-          </Paper>
-        ) : (
-          <TableContainer component={Paper} sx={{ mb: 4 }}>
-            <Table>
-              <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-                <TableRow>
-                  <TableCell><Typography fontWeight="bold">Business Name</Typography></TableCell>
-                  <TableCell><Typography fontWeight="bold">Owner Name</Typography></TableCell>
-                  <TableCell><Typography fontWeight="bold">Email</Typography></TableCell>
-                  <TableCell><Typography fontWeight="bold">Phone</Typography></TableCell>
-                  <TableCell><Typography fontWeight="bold">Services</Typography></TableCell>
-                  <TableCell><Typography fontWeight="bold">Actions</Typography></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {pendingProviders.map((provider) => (
-                  <TableRow key={provider._id} hover>
-                    <TableCell>{provider.businessName}</TableCell>
-                    <TableCell>{provider.fullName}</TableCell>
-                    <TableCell>{provider.emailAddress}</TableCell>
-                    <TableCell>{provider.mobileNumber}</TableCell>
-                    <TableCell>
-                      {provider.services && provider.services.map((service, idx) => (
-                        <Chip 
-                          key={idx} 
-                          label={service.name} 
-                          size="small" 
-                          sx={{ mr: 0.5, mb: 0.5 }}
-                        />
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      <IconButton 
-                        color="success" 
-                        onClick={() => handleApprove(provider)}
-                        title="Approve"
-                      >
-                        <ApproveIcon />
-                      </IconButton>
-                    </TableCell>
+
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tab label="Pending Providers" />
+            <Tab label="Approved Providers" />
+            <Tab label="Pending Services" />
+            <Tab label="Service History" />
+          </Tabs>
+        </Box>
+
+        {/* Pending Providers Tab */}
+        <TabPanel value={tabValue} index={0}>
+          <Typography variant="h5" gutterBottom color="primary" fontWeight="bold">
+            Pending Service Provider Approvals
+          </Typography>
+          
+          {pendingProviders.length === 0 ? (
+            <Alert severity="info">
+              No pending approvals at this time.
+            </Alert>
+          ) : (
+            <TableContainer component={Paper} sx={{ mb: 4, border: '2px solid #e0e0e0' }}>
+              <Table>
+                <TableHead sx={{ bgcolor: 'primary.main' }}>
+                  <TableRow>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Name</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Email</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Business</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>City</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Date Applied</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-        
-        {/* Approved Providers Section */}
-        <Typography variant="h5" sx={{ mb: 2 }}>
-          Approved Service Providers
-        </Typography>
-        
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-              <TableRow>
-                <TableCell><Typography fontWeight="bold">Business Name</Typography></TableCell>
-                <TableCell><Typography fontWeight="bold">Owner Name</Typography></TableCell>
-                <TableCell><Typography fontWeight="bold">Email</Typography></TableCell>
-                <TableCell><Typography fontWeight="bold">Status</Typography></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {approvedProviders.map((provider) => (
-                <TableRow key={provider._id} hover>
-                  <TableCell>{provider.businessName}</TableCell>
-                  <TableCell>{provider.fullName}</TableCell>
-                  <TableCell>{provider.emailAddress}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label="Approved" 
-                      color="success" 
-                      size="small"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        
-        {/* Approval Confirmation Dialog */}
-        <Dialog
-          open={dialogOpen}
-          onClose={handleCloseDialog}
-          aria-labelledby="approval-dialog-title"
-          aria-describedby="approval-dialog-description"
-        >
-          <DialogTitle id="approval-dialog-title">
-            Confirm Service Provider Approval
-          </DialogTitle>
-          <DialogContent>
-            <DialogContentText id="approval-dialog-description">
-              Are you sure you want to approve {selectedProvider?.businessName || selectedProvider?.fullName}? 
-              Once approved, they will be notified and can start providing services.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={confirmApproval} color="primary" autoFocus>
-              Approve
-            </Button>
-          </DialogActions>
-        </Dialog>
-        
-        {/* Success/Error Snackbar */}
-        <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={handleCloseSnackbar} 
-            severity={success ? "success" : "error"} 
-            sx={{ width: '100%' }}
-          >
-            {success || error}
+                </TableHead>
+                <TableBody>
+                  {pendingProviders.map((provider) => (
+                    <TableRow 
+                      key={provider._id}
+                      hover
+                      sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                      onClick={() => handleViewProvider(provider)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <TableCell>{provider.fullName}</TableCell>
+                      <TableCell>{provider.emailAddress}</TableCell>
+                      <TableCell>{provider.businessName || 'N/A'}</TableCell>
+                      <TableCell>{provider.city || 'N/A'}</TableCell>
+                      <TableCell>
+                        {provider.createdAt ? new Date(provider.createdAt).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <IconButton 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewProvider(provider);
+                          }}
+                          color="primary"
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                        <IconButton 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveProvider(provider._id);
+                          }}
+                          color="success"
+                        >
+                          <CheckCircleIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* Approved Providers Tab */}
+        <TabPanel value={tabValue} index={1}>
+          <Typography variant="h5" gutterBottom color="primary" fontWeight="bold">
+            Approved Service Providers
+          </Typography>
+          
+          {approvedProviders.length === 0 ? (
+            <Alert severity="info">
+              No approved service providers yet.
+            </Alert>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead sx={{ bgcolor: 'success.main' }}>
+                  <TableRow>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Name</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Email</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Business</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>City</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {approvedProviders.map((provider) => (
+                    <TableRow key={provider._id} hover>
+                      <TableCell>{provider.fullName}</TableCell>
+                      <TableCell>{provider.emailAddress}</TableCell>
+                      <TableCell>{provider.businessName || 'N/A'}</TableCell>
+                      <TableCell>{provider.city || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Chip label="Approved" color="success" size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton 
+                          onClick={() => handleViewProvider(provider)}
+                          color="primary"
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* Other tabs content */}
+        <TabPanel value={tabValue} index={2}>
+          <Typography variant="h5" gutterBottom>
+            Pending Services
+          </Typography>
+          <Alert severity="info">
+            This feature will be implemented soon.
           </Alert>
-        </Snackbar>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          <Typography variant="h5" gutterBottom>
+            Service History
+          </Typography>
+          <Alert severity="info">
+            This feature will be implemented soon.
+          </Alert>
+        </TabPanel>
       </Container>
+
+      <ProviderDetailsDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        provider={selectedProvider}
+        onApprove={handleApproveProvider}
+      />
+
       <Footer />
     </Box>
   );

@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+// Define API base URL
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
+const API_URL = `${API_BASE_URL}/api`;
 
 // Create axios instance with default config
 const api = axios.create({
@@ -13,16 +16,35 @@ const api = axios.create({
 export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    localStorage.setItem('token', token);
+    // Store in memory only, not localStorage
   } else {
     delete api.defaults.headers.common['Authorization'];
-    localStorage.removeItem('token');
   }
 };
 
 export const login = async (credentials, role) => {
   try {
-    const response = await api.post('/auth/login', { ...credentials, role });
+    // Ensure role is always provided
+    if (!role) {
+      throw new Error('User role is required for login');
+    }
+
+    const loginData = { 
+      emailAddress: credentials.emailAddress,
+      password: credentials.password,
+      role: role // Explicitly include role in request
+    };
+
+    console.log('Auth service login attempt:', { email: loginData.emailAddress, role: loginData.role });
+
+    const response = await api.post('/auth/login', loginData);
+    
+    console.log('Login response:', response.data);
+
+    // Verify that the returned user has the correct role
+    if (response.data.user && response.data.user.role !== role) {
+      throw new Error('Role mismatch in authentication response');
+    }
     
     if (response.data.token) {
       setAuthToken(response.data.token);
@@ -30,34 +52,64 @@ export const login = async (credentials, role) => {
     
     return response.data;
   } catch (error) {
+    console.error('Login error:', error);
+    
     if (error.response?.data?.pendingApproval) {
       throw { 
         ...error.response.data, 
         pendingApproval: true 
       };
     }
-    throw error.response?.data || { message: error.message };
+    
+    // Handle role-specific error messages
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    
+    throw error.response?.data || { message: error.message || 'Login failed' };
   }
 };
 
-export const register = async (userData, role) => {
+export const register = async (userData, role = 'customer') => {
   try {
-    const response = await api.post('/auth/register', { ...userData, role });
+    console.log('Auth service registration attempt with role:', role);
     
-    // Only set token for immediate login (customer and admin)
-    if (response.data.token) {
-      setAuthToken(response.data.token);
+    // Set the role if not already set
+    if (userData instanceof FormData) {
+      if (!userData.has('role')) {
+        userData.append('role', role);
+      }
+      // Debug FormData contents - but filter out file objects for cleaner logs
+      console.log('FormData entries:');
+      for (let [key, value] of userData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
+        } else {
+          console.log(`${key}: ${value}`);
+        }
+      }
+    } else {
+      userData.role = role;
+      console.log('Regular object data:', userData);
     }
+
+    const response = await api.post('/auth/register', userData, {
+      headers: {
+        'Content-Type': userData instanceof FormData ? 'multipart/form-data' : 'application/json',
+      },
+    });
     
+    console.log('Registration successful:', response.data);
     return response.data;
   } catch (error) {
-    if (error.response?.data?.adminExists) {
-      throw { 
-        ...error.response.data, 
-        adminExists: true 
-      };
+    console.error('Registration error:', error);
+    console.error('Error response:', error.response?.data);
+    
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
     }
-    throw error.response?.data || { message: error.message };
+    
+    throw new Error(error.message || 'Registration failed. Please try again.');
   }
 };
 
@@ -106,9 +158,30 @@ export const getProfile = async () => {
 
 export const getPendingProviders = async () => {
   try {
-    const response = await api.get('/auth/pending-providers');
+    const response = await api.get('/auth/pending-service-providers');
     return response.data;
   } catch (error) {
+    console.error('Get pending providers error:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const getApprovedProviders = async () => {
+  try {
+    const response = await api.get('/auth/approved-providers');
+    return response.data;
+  } catch (error) {
+    console.error('Get approved providers error:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const getUserCounts = async () => {
+  try {
+    const response = await api.get('/auth/user-counts');
+    return response.data;
+  } catch (error) {
+    console.error('Get user counts error:', error);
     throw error.response?.data || { message: error.message };
   }
 };
@@ -118,25 +191,47 @@ export const approveServiceProvider = async (providerId) => {
     const response = await api.put(`/auth/approve-provider/${providerId}`);
     return response.data;
   } catch (error) {
+    console.error('Approve provider error:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const getPublicServiceProviders = async () => {
+  try {
+    const response = await api.get('/auth/public/service-providers');
+    return response.data;
+  } catch (error) {
+    console.error('Get public service providers error:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const getApprovedServiceProviders = async () => {
+  try {
+    const response = await api.get('/auth/approved-service-providers');
+    return response.data;
+  } catch (error) {
+    console.error('Get approved service providers error:', error);
     throw error.response?.data || { message: error.message };
   }
 };
 
 export const logout = () => {
-  localStorage.removeItem('user');
   setAuthToken(null);
 };
 
 export const verifyToken = async () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  if (user?.token) {
-    try {
-      const response = await api.get('/auth/verify-token');
-      return response.data.valid;
-    } catch (error) {
-      logout();
-      return false;
+  try {
+    // Check if token is already set in headers
+    const token = api.defaults.headers.common['Authorization'];
+    if (!token) {
+      throw new Error('No token found');
     }
+    
+    const response = await api.get('/auth/verify');
+    return response.data;
+  } catch (error) {
+    setAuthToken(null);
+    throw error.response?.data || { message: error.message };
   }
-  return false;
 };
