@@ -1,136 +1,3 @@
-// import React, { useState, useEffect } from 'react';
-// import {
-//   Box,
-//   TextField,
-//   Button,
-//   Typography,
-//   Paper,
-//   Container,
-//   InputAdornment,
-//   IconButton,
-// } from '@mui/material';
-// import { useNavigate, useLocation } from 'react-router-dom';
-// import Visibility from '@mui/icons-material/Visibility';
-// import VisibilityOff from '@mui/icons-material/VisibilityOff';
-// import { resetPassword } from '../services/auth';
-// import Header from '../components/Header';
-// import Footer from '../components/footer';
-
-// const ResetPassword = () => {
-//   const [newPassword, setNewPassword] = useState('');
-//   const [confirmPassword, setConfirmPassword] = useState('');
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [error, setError] = useState('');
-//   const navigate = useNavigate();
-//   const location = useLocation();
-  
-//   // Get reset token from URL query parameters
-//   const queryParams = new URLSearchParams(location.search);
-//   const resetToken = queryParams.get('token');
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-    
-//     if (!resetToken) {
-//       setError('Invalid reset token');
-//       return;
-//     }
-
-//     if (newPassword !== confirmPassword) {
-//       setError('Passwords do not match');
-//       return;
-//     }
-
-//     if (newPassword.length < 6) {
-//       setError('Password must be at least 6 characters long');
-//       return;
-//     }
-
-//     try {
-//       const response = await resetPassword(resetToken, newPassword);
-//       if (response.success) {
-//         alert('Password reset successful!');
-//         navigate('/customer-login');
-//       } else {
-//         setError(response.message || 'Failed to reset password');
-//       }
-//     } catch (err) {
-//       console.error('Reset password error:', err);
-//       setError(err.message || 'Failed to reset password. Please try again.');
-//     }
-//   };
-
-//   // Add validation for token presence
-//   useEffect(() => {
-//     if (!resetToken) {
-//       setError('Invalid or missing reset token');
-//     }
-//   }, [resetToken]);
-
-//   return (
-//     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-//       <Header />
-//       <Container component="main" maxWidth="md" sx={{ flexGrow: 1, py: 4 }}>
-//         <Paper elevation={3} sx={{ p: 4, mt: 2 }}>
-//           <Typography variant="h5" component="h1" gutterBottom>
-//             Reset Password
-//           </Typography>
-          
-//           <Box component="form" onSubmit={handleSubmit}>
-//             <TextField
-//               fullWidth
-//               margin="normal"
-//               label="New Password"
-//               type={showPassword ? 'text' : 'password'}
-//               value={newPassword}
-//               onChange={(e) => setNewPassword(e.target.value)}
-//               InputProps={{
-//                 endAdornment: (
-//                   <InputAdornment position="end">
-//                     <IconButton
-//                       onClick={() => setShowPassword(!showPassword)}
-//                       edge="end"
-//                     >
-//                       {showPassword ? <VisibilityOff /> : <Visibility />}
-//                     </IconButton>
-//                   </InputAdornment>
-//                 ),
-//               }}
-//             />
-            
-//             <TextField
-//               fullWidth
-//               margin="normal"
-//               label="Confirm Password"
-//               type={showPassword ? 'text' : 'password'}
-//               value={confirmPassword}
-//               onChange={(e) => setConfirmPassword(e.target.value)}
-//             />
-            
-//             {error && (
-//               <Typography color="error" sx={{ mt: 2 }}>
-//                 {error}
-//               </Typography>
-//             )}
-            
-//             <Button
-//               type="submit"
-//               fullWidth
-//               variant="contained"
-//               sx={{ mt: 3 }}
-//             >
-//               Reset Password
-//             </Button>
-//           </Box>
-//         </Paper>
-//       </Container>
-//       <Footer />
-//     </Box>
-//   );
-// };
-
-// export default ResetPassword;
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -147,9 +14,9 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import Header from '../components/Header';
-import Footer from '../components/footer';
+import { resetPassword as resetPasswordService } from '../../services/auth'; // Import the service
+import Header from '../../components/Header';
+import Footer from '../../components/footer';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -163,7 +30,6 @@ const ResetPassword = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
     // Extract token from URL query params
@@ -194,29 +60,22 @@ const ResetPassword = () => {
     setError('');
     
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/reset-password', {
-        resetToken,
-        newPassword
-      });
+      // Use the service function instead of direct axios call
+      const response = await resetPasswordService(resetToken, newPassword);
       
-      console.log('Reset password response:', response.data);
+      console.log('Reset password response:', response);
       
       setSuccess(true);
       setSnackbarOpen(true);
       
-      // Store user role for redirect
-      if (response.data.userRole) {
-        setUserRole(response.data.userRole);
-      }
-      
       // Redirect to login page after 2 seconds
       setTimeout(() => {
         // Redirect based on role if available
-        if (response.data.userRole === 'admin') {
+        if (response.userRole === 'admin') {
           navigate('/login');
-        } else if (response.data.userRole === 'serviceProvider') {
+        } else if (response.userRole === 'serviceProvider') {
           navigate('/service-provider-login');
-        } else if (response.data.userRole === 'customer') {
+        } else if (response.userRole === 'customer') {
           navigate('/customer-login');
         } else {
           // Default redirect
@@ -225,7 +84,7 @@ const ResetPassword = () => {
       }, 2000);
     } catch (err) {
       console.error('Reset password error:', err);
-      setError(err.response?.data?.message || 'Failed to reset password. Please try again.');
+      setError(err.message || 'Failed to reset password. Please try again.');
       setSnackbarOpen(true);
     } finally {
       setLoading(false);
@@ -351,20 +210,28 @@ const ResetPassword = () => {
                   )
                 }}
               />
-              
-              <Button
+                <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 disabled={loading}
                 sx={{
                   py: 1.5,
-                  bgcolor: '#1976d2',
+                  bgcolor: '#003047',
                   color: 'white',
-                  borderRadius: '4px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
                   '&:hover': {
-                    bgcolor: '#1565c0',
-                  }
+                    bgcolor: '#003047',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 8px 25px rgba(21, 20, 44, 0.3)',
+                  },
+                  '&:disabled': {
+                    bgcolor: '#B0BEC5',
+                    color: '#FFFFFF',
+                  },
+                  transition: 'all 0.3s ease'
                 }}
               >
                 {loading ? (

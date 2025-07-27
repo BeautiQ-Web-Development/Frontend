@@ -1,81 +1,53 @@
-// import React from 'react';
-// import { Navigate, useLocation } from 'react-router-dom';
-// import { useAuth } from '../context/AuthContext';
-
-// const ProtectedRoute = ({ children, allowedRoles }) => {
-//   const { user, loading } = useAuth();
-//   const location = useLocation();
-  
-//   if (loading) {
-//     return <div>Loading...</div>;
-//   }
-
-//   if (!user) {
-//     return <Navigate to="/login" state={{ from: location }} replace />;
-//   }
-
-//   if (!allowedRoles.includes(user.role)) {
-//     // Redirect to appropriate dashboard based on role
-//     const dashboardRoutes = {
-//       admin: '/admin/dashboard',
-//       service_provider: '/service-provider/dashboard',
-//       customer: '/customer/dashboard'
-//     };
-//     return <Navigate to={dashboardRoutes[user.role] || '/login'} replace />;
-//   }
-
-//   return children;
-// };
-
-// export default ProtectedRoute;
-
-
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CircularProgress, Box } from '@mui/material';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading, isAuthenticated } = useAuth();
-  const location = useLocation();
-  
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { user, token, loading } = useAuth();
+
+  console.log('ProtectedRoute - token:', !!token);
+  console.log('ProtectedRoute - user:', user);
+  console.log('ProtectedRoute - allowedRoles:', allowedRoles);
+  console.log('ProtectedRoute - loading:', loading);
+
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />
       </Box>
     );
   }
 
-  if (!isAuthenticated || !user) {
-    // Redirect to appropriate login based on intended role
-    let loginRoute = '/login'; // Default to admin login
+  const isAuthenticated = !!(token && user);
+
+  if (!isAuthenticated) {
+    console.log('Not authenticated, redirecting to login');
     
-    if (allowedRoles.includes('customer')) {
-      loginRoute = '/customer-login';
+    // Redirect based on required role
+    if (allowedRoles.includes('admin')) {
+      return <Navigate to="/admin-login" replace />;
     } else if (allowedRoles.includes('serviceProvider')) {
-      loginRoute = '/service-provider-login';
+      return <Navigate to="/service-provider-login" replace />;
+    } else if (allowedRoles.includes('customer')) {
+      return <Navigate to="/customer-login" replace />;
     }
     
-    return <Navigate to={loginRoute} state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard based on actual role
-    const dashboardRoutes = {
-      admin: '/admin-dashboard',
-      serviceProvider: '/service-provider-dashboard',
-      customer: '/customer-dashboard'
-    };
-    
-    return <Navigate to={dashboardRoutes[user.role] || '/'} replace />;
+  // Check if user role is allowed
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    console.log('User role not allowed:', user?.role, 'Required:', allowedRoles);
+    return <Navigate to="/" replace />;
   }
 
-  // For service providers, check if they're approved
-  if (user.role === 'serviceProvider' && !user.approved) {
-    return <Navigate to="/service-provider-login" state={{ pendingApproval: true }} replace />;
+  // Special check for service providers - they must be approved
+  if (user?.role === 'serviceProvider' && !user?.approved) {
+    return <Navigate to="/service-provider-approval-success" replace />;
   }
 
+  console.log('Access granted to protected route');
   return children;
 };
 

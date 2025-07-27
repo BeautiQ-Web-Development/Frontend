@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -11,14 +11,12 @@ import {
   Button,
   styled,
   Grid,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-
-// Import sample images - you'll need to add these to your assets folder
-import salon1 from '../assets/Salon1.jpg';
-import salon2 from '../assets/Salon2.jpg';
-import salon3 from '../assets/Salon3.jpg';
-import salon4 from '../assets/Salon4.jpg';
+import { getApprovedProviders } from '../services/auth';
+import axios from 'axios';
 
 // Styled components
 const SectionTitle = styled(Typography)(({ theme }) => ({
@@ -61,89 +59,132 @@ const SectionContainer = styled(Box)(({ theme }) => ({
 }));
 
 const RecommendedSection = () => {
-  // Sample data for salons
-  const salons = [
-    {
-      id: 1,
-      name: 'Style Space',
-      image: salon1,
-      rating: 4.8,
-      reviews: 758,
-      available: '2 slots available',
-    },
-    {
-      id: 2,
-      name: 'Style Space',
-      image: salon2,
-      rating: 4.9,
-      reviews: 632,
-      available: '1 slot available',
-    },
-    {
-      id: 3,
-      name: 'Style Space',
-      image: salon3,
-      rating: 4.7,
-      reviews: 495,
-      available: 'Fully booked',
-    },
-    {
-      id: 4,
-      name: 'Style Space',
-      image: salon4,
-      rating: 4.9,
-      reviews: 872,
-      available: '3 slots available',
-    },
-  ];
+  const [serviceProviders, setServiceProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  useEffect(() => {
+    fetchServiceProviders();
+  }, []);
+
+  const fetchServiceProviders = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await getApprovedProviders();
+      console.log('Recommendation section - response:', response);
+      
+      if (response.success && response.providers) {
+        // Take only first 4 providers for the recommendation section
+        setServiceProviders(response.providers.slice(0, 4));
+      } else {
+        console.log('No providers in response or request failed');
+        setServiceProviders([]);
+        // Don't set error for empty results in public view
+        if (response.message && !response.message.includes('Unable to fetch')) {
+          setError(response.message);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching service providers:', error);
+      setError('Unable to load recommendations at this time');
+      setServiceProviders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Container>
+        <SectionContainer>
+          <SectionTitle variant="h5">Recommended Service Providers</SectionTitle>
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        </SectionContainer>
+      </Container>
+    );
+  }
+
+  // Show error state (only for critical errors)
+  if (error && error.includes('critical')) {
+    return (
+      <Container>
+        <SectionContainer>
+          <SectionTitle variant="h5">Recommended Service Providers</SectionTitle>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        </SectionContainer>
+      </Container>
+    );
+  }
+
+  // Show empty state or providers
   return (
     <Container>
       <SectionContainer>
-        <SectionTitle variant="h5">Recommended</SectionTitle>
+        <SectionTitle variant="h5">Recommended Service Providers</SectionTitle>
         
-        <Grid container spacing={2}>
-          {salons.map((salon) => (
-            <Grid item xs={12} sm={6} md={3} key={salon.id}>
-              <SalonCard>
-                <CardMedia
-                  component="img"
-                  height="160"
-                  image={salon.image}
-                  alt={salon.name}
-                />
-                <CardContent>
-                  <Typography gutterBottom variant="h6" component="div">
-                    {salon.name}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Rating
-                      value={salon.rating}
-                      precision={0.1}
-                      size="small"
-                      readOnly
+        {serviceProviders.length === 0 ? (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Service providers will be displayed here once they join our platform.
+          </Alert>
+        ) : (
+          <>
+            <Grid container spacing={2}>
+              {serviceProviders.map((provider) => (
+                <Grid item xs={12} sm={6} md={3} key={provider._id}>
+                  <SalonCard>
+                    <CardMedia
+                      component="img"
+                      height="160"
+                      image={provider.profilePhoto || '/placeholder-salon.jpg'}
+                      alt={provider.businessName || provider.fullName}
+                      onError={(e) => {
+                        e.target.src = '/placeholder-salon.jpg'; // Fallback image
+                      }}
                     />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      {salon.rating} ({salon.reviews})
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {salon.available}
-                    </Typography>
-                    <BookNowButton variant="contained" size="small">
-                      Book Now
-                    </BookNowButton>
-                  </Box>
-                </CardContent>
-              </SalonCard>
+                    <CardContent>
+                      <Typography gutterBottom variant="h6" component="div">
+                        {provider.businessName || provider.fullName}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Rating
+                          value={4.8} // You can add rating field to provider model later
+                          precision={0.1}
+                          size="small"
+                          readOnly
+                        />
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                          4.8 (758)
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                        {provider.city || provider.address || 'Location not specified'}
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" color="success.main">
+                          Available
+                        </Typography>
+                        <BookNowButton variant="contained" size="small">
+                          Book Now
+                        </BookNowButton>
+                      </Box>
+                    </CardContent>
+                  </SalonCard>
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
-        
-        <ArrowButton aria-label="next">
-          <ArrowForwardIosIcon fontSize="small" />
-        </ArrowButton>
+            
+            <ArrowButton aria-label="next">
+              <ArrowForwardIosIcon fontSize="small" />
+            </ArrowButton>
+          </>
+        )}
       </SectionContainer>
     </Container>
   );

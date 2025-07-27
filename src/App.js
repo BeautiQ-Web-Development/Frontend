@@ -1,91 +1,120 @@
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { Box, styled } from '@mui/material';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
 
+// Import all components
+
+import CustomerLoginPage from './pages/auth/customerLoginPage';
+import CustomerRegisterPage from './pages/auth/customerRegisterPage';
+import ServiceProviderLoginPage from './pages/auth/serviceProviderLoginPage';
+import ServiceProviderRegisterPage from './pages/auth/serviceProviderRegisterPage';
+import AdminLoginPage from './pages/auth/adminLoginPage';
+import AdminRegisterPage from './pages/auth/adminRegisterPage';
+import ForgotPasswordPage from './pages/auth/forgotPasswordPage';
+import ResetPasswordPage from './pages/auth/resetPasswordPage';
+import AdminDashboardPage from './pages/dashboards/adminDashboardPage';
+import ServiceProviderDashboardPage from './pages/dashboards/serviceProviderDashboardPage';
+import CustomerDashboardPage from './pages/dashboards/customerDashboardPage';
+import ServiceProviderApprovalSuccessPage from './components/ServiceProviderApprovalSuccess';
+import ServiceManagementPage from './pages/serviceProvider/ServiceProvider.ServiceManagementPage';
 import ProtectedRoute from './components/ProtectedRoute';
-
-// Page imports
 import LandingPage from './pages/landingPage';
-import CustomerLogin from './pages/customerLoginPage';
-import CustomerRegister from './pages/customerRegisterPage';
-import CustomerDashboard from './pages/customerDashboardPage';
-import ServiceProviderLogin from './pages/serviceProviderLoginPage';
-import ServiceProviderRegister from './pages/serviceProviderRegisterPage';
-import ServiceProviderDashboard from './pages/serviceProviderDashboardPage';
-import AdminLogin from './pages/adminLoginPage';
-import AdminRegister from './pages/adminRegisterPage';
-import AdminDashboard from './pages/adminDashboardPage';
-import ForgotPassword from './pages/forgotPasswordPage';
-import ResetPassword from './pages/resetPasswordPage';
-import ServiceProviderApprovalSuccess from './pages/ServiceProviderApprovalSuccess';
+import PackageManagement from './pages/serviceProvider/ServiceProvider.PackageManagementPage';
+import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
+import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
+import AdminNotifications from './pages/admin/Admin.NotificationsPage';
 
-const GradientBackground = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #F5A8FFFF 0%, #a8c1ff 100%)',
+
+// Styled component for clean white background
+const CleanBackground = styled(Box)(({ theme }) => ({
+  backgroundColor: '#FFFFFF',
   minHeight: '100vh',
-  overflow: 'hidden',
+  color: '#001F3F'
 }));
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <GradientBackground>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<LandingPage />} />
-            
-            {/* Customer routes */}
-            <Route path="/customer-login" element={<CustomerLogin />} />
-            <Route path="/customer-register" element={<CustomerRegister />} />
-            <Route path="/customer-forgot-password" element={<ForgotPassword userType="customer" />} />
-            <Route
-              path="/customer-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['customer']}>
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Service Provider routes */}
-            <Route path="/service-provider-login" element={<ServiceProviderLogin />} />
-            <Route path="/service-provider-register" element={<ServiceProviderRegister />} />
-            <Route path="/service-provider-forgot-password" element={<ForgotPassword userType="serviceProvider" />} />
-            <Route
-              path="/service-provider-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['serviceProvider']}>
-                  <ServiceProviderDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/service-provider-approval-success" 
-              element={<ServiceProviderApprovalSuccess />} 
-            />
-            
-            {/* Admin routes */}
-            <Route path="/login" element={<AdminLogin />} />
-            <Route path="/register" element={<AdminRegister />} />
-            <Route path="/forgot-password" element={<ForgotPassword userType="admin" />} />
-            <Route
-              path="/admin-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Common routes */}
-            <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* Fallback route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </GradientBackground>
-      </Router>
-    </AuthProvider>
+    <CleanBackground>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<AdminLoginPage />} />
+          <Route path="/customer-login" element={<CustomerLoginPage />} />
+          <Route path="/customer-register" element={<CustomerRegisterPage />} />
+          <Route path="/service-provider-login" element={<ServiceProviderLoginPage />} />
+          <Route path="/service-provider-register" element={<ServiceProviderRegisterPage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/admin-register" element={<AdminRegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/service-provider-approval-success" element={<ServiceProviderApprovalSuccessPage />} />
+          
+          {/* Protected Routes */}
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/service-provider-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <ServiceProviderDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/customer-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CustomerDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/service-provider/services" 
+            element={
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <ServiceManagementPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/service-provider/packages" 
+            element={
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <PackageManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/service-management" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ServiceManagementAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/users" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserManagementAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/notifications" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminNotifications />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+    </CleanBackground>
   );
 }
 

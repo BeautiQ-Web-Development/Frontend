@@ -13,12 +13,14 @@ import {
   Snackbar
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
-import Header from '../components/Header';
-import Footer from '../components/footer';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { useAuth } from '../../context/AuthContext';
+import Header from '../../components/Header';
+import Footer from '../../components/footer';
+import { validateEmail } from '../../utils/validation';
 
-const ServiceProviderLogin = () => {
+const AdminLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
@@ -26,10 +28,10 @@ const ServiceProviderLogin = () => {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pendingApproval, setPendingApproval] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,32 +44,47 @@ const ServiceProviderLogin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setPendingApproval(false);
+    
+    // Enhanced validation
+    const errors = {};
+    const emailErrors = validateEmail(formData.emailAddress);
+    if (emailErrors.length > 0) errors.emailAddress = emailErrors[0];
+    
+    if (!formData.password) errors.password = 'Password is required';
+    
+    setValidationErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      setError('Please fix validation errors');
+      setSnackbarOpen(true);
+      return;
+    }
+    
     setLoading(true);
 
     try {
+      console.log('Attempting admin login with:', { 
+        email: formData.emailAddress, 
+        role: 'admin' 
+      });
+      
       const response = await login({
         emailAddress: formData.emailAddress,
-        password: formData.password,
-        role: 'serviceProvider'  // Always specify role
-      });
-
-      // Check the response
-      if (response.user.approved) {
-        navigate('/service-provider-dashboard');
+        password: formData.password
+      }, 'admin');
+      
+      console.log('Login response:', response);
+      
+      // Check if login was successful and user has admin role
+      if (response.user && response.token) {
+        // Navigate to admin dashboard
+        navigate('/admin-dashboard');
       } else {
-        setPendingApproval(true);
-        setSnackbarOpen(true);
+        throw new Error('Invalid admin credentials');
       }
     } catch (err) {
-      console.error('Login attempt failed:', err);
-      
-      if (err.pendingApproval) {
-        setPendingApproval(true);
-        setError('Your account is pending approval.');
-      } else {
-        setError(err.message || 'Invalid credentials. Please try again.');
-      }
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Please check your credentials.');
       setSnackbarOpen(true);
     } finally {
       setLoading(false);
@@ -75,7 +92,7 @@ const ServiceProviderLogin = () => {
   };
 
   const handleClickShowPassword = () => {
-    setShowPassword((prev) => !prev);
+    setShowPassword(!showPassword);
   };
 
   const handleCloseSnackbar = () => {
@@ -90,11 +107,10 @@ const ServiceProviderLogin = () => {
           variant="h4"
           component="h1"
           align="center"
-          color="primary"
           fontWeight="bold"
-          sx={{ mb: 4 }}
+          sx={{ color: '#001F3F', mb: 4 }}  // heading in deep teal
         >
-          Welcome to Service Provider Login
+          Admin Login
         </Typography>
         
         <Paper
@@ -112,15 +128,6 @@ const ServiceProviderLogin = () => {
             bgcolor: 'background.paper',
           }}
         >
-          {pendingApproval && (
-            <Alert 
-              severity="info" 
-              sx={{ width: '100%', mb: 3 }}
-            >
-              Your account is pending admin approval. You will be notified once approved.
-            </Alert>
-          )}
-          
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField
               margin="normal"
@@ -129,12 +136,14 @@ const ServiceProviderLogin = () => {
               id="emailAddress"
               label="Email Address"
               name="emailAddress"
-              placeholder="example@gmail.com"
+              placeholder="admin@beautiq.com"
               value={formData.emailAddress}
               onChange={handleChange}
               variant="outlined"
               sx={{ mb: 3 }}
               type="email"
+              error={!!validationErrors.emailAddress}
+              helperText={validationErrors.emailAddress}
             />
             
             <TextField
@@ -163,15 +172,16 @@ const ServiceProviderLogin = () => {
                   </InputAdornment>
                 )
               }}
-            />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Link component={RouterLink} to="/service-provider-forgot-password" variant="body2">
+            />            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Link
+                component={RouterLink}
+                to="/forgot-password"
+                variant="body2"
+                sx={{ color: '#001F3F' }}       // link in deep teal
+              >
                 Forgot Password?
               </Link>
-            </Box>
-            
-            <Button
+            </Box><Button
               type="submit"
               fullWidth
               variant="contained"
@@ -180,21 +190,20 @@ const ServiceProviderLogin = () => {
                 mt: 1,
                 mb: 2,
                 py: 1.5,
-                bgcolor: '#1976d2',
-                color: 'white',
-                borderRadius: '4px',
-                '&:hover': {
-                  bgcolor: '#1565c0',
-                }
+                bgcolor: '#001F3F',          // new primary color
+                '&:hover': { bgcolor: '#001F3F' }  // keep same on hover
               }}
             >
               {loading ? 'Logging in...' : 'Login'}
             </Button>
-            
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2">
-                Don't have an account?{' '}
-                <Link component={RouterLink} to="/service-provider-register" sx={{ textDecoration: 'none' }}>
+                Don't have an admin account?{' '}
+                <Link
+                  component={RouterLink}
+                  to="/admin-register"
+                  sx={{ textDecoration: 'none', color: '#001F3F' }}  // link in deep teal
+                >
                   Register here
                 </Link>
               </Typography>
@@ -210,12 +219,10 @@ const ServiceProviderLogin = () => {
         >
           <Alert 
             onClose={handleCloseSnackbar} 
-            severity={pendingApproval ? "info" : "error"} 
+            severity="error" 
             sx={{ width: '100%' }}
           >
-            {pendingApproval 
-              ? "Your account is pending admin approval. You will be notified once approved." 
-              : error}
+            {error}
           </Alert>
         </Snackbar>
       </Container>
@@ -224,4 +231,4 @@ const ServiceProviderLogin = () => {
   );
 };
 
-export default ServiceProviderLogin;
+export default AdminLogin;
