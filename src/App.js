@@ -1,45 +1,48 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Box, styled } from '@mui/material';
 
 // Import all components
 
-import CustomerLoginPage from './pages/customerLoginPage';
-import CustomerRegisterPage from './pages/customerRegisterPage';
-import ServiceProviderLoginPage from './pages/serviceProviderLoginPage';
-import ServiceProviderRegisterPage from './pages/serviceProviderRegisterPage';
-import AdminLoginPage from './pages/adminLoginPage';
-import AdminRegisterPage from './pages/adminRegisterPage';
-import ForgotPasswordPage from './pages/forgotPasswordPage';
-import ResetPasswordPage from './pages/resetPasswordPage';
-import AdminDashboardPage from './pages/adminDashboardPage';
-import ServiceProviderDashboardPage from './pages/serviceProviderDashboardPage';
-import CustomerDashboardPage from './pages/customerDashboardPage';
-import ServiceProviderApprovalSuccessPage from './pages/ServiceProviderApprovalSuccess';
-import ServiceManagementPage from './pages/serviceManagementPage';
-import ServiceBrowserPage from './pages/serviceBrowserPage';
+import CustomerLoginPage from './pages/auth/customerLoginPage';
+import CustomerRegisterPage from './pages/auth/customerRegisterPage';
+import ServiceProviderLoginPage from './pages/auth/serviceProviderLoginPage';
+import ServiceProviderRegisterPage from './pages/auth/serviceProviderRegisterPage';
+import AdminLoginPage from './pages/auth/adminLoginPage';
+import AdminRegisterPage from './pages/auth/adminRegisterPage';
+import ForgotPasswordPage from './pages/auth/forgotPasswordPage';
+import ResetPasswordPage from './pages/auth/resetPasswordPage';
+import AdminDashboardPage from './pages/dashboards/adminDashboardPage';
+import ServiceProviderDashboardPage from './pages/dashboards/serviceProviderDashboardPage';
+import CustomerDashboardPage from './pages/dashboards/customerDashboardPage';
+import ServiceProviderApprovalSuccessPage from './components/ServiceProviderApprovalSuccess';
+import ServiceManagementPage from './pages/serviceProvider/ServiceProvider.ServiceManagementPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './pages/landingPage';
+import PackageManagement from './pages/serviceProvider/ServiceProvider.PackageManagementPage';
+import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
+import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
+import AdminNotifications from './pages/admin/Admin.NotificationsPage';
 
 
-// Styled component for gradient background with teal and off-white theme
-const GradientBackground = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #F8F8FF 0%, #E6F7F8 50%, #CCF0F2 100%)', // Off-white to light teal
+// Styled component for clean white background
+const CleanBackground = styled(Box)(({ theme }) => ({
+  backgroundColor: '#FFFFFF',
   minHeight: '100vh',
-  overflow: 'hidden',
+  color: '#001F3F'
 }));
 
 function App() {
   return (
-    <GradientBackground>
-      <Router>
+    <CleanBackground>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<AdminLoginPage />} />
           <Route path="/customer-login" element={<CustomerLoginPage />} />
           <Route path="/customer-register" element={<CustomerRegisterPage />} />
           <Route path="/service-provider-login" element={<ServiceProviderLoginPage />} />
           <Route path="/service-provider-register" element={<ServiceProviderRegisterPage />} />
-          <Route path="/login" element={<AdminLoginPage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
           <Route path="/admin-register" element={<AdminRegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -71,7 +74,7 @@ function App() {
             } 
           />
           <Route 
-            path="/service-management" 
+            path="/service-provider/services" 
             element={
               <ProtectedRoute allowedRoles={['serviceProvider']}>
                 <ServiceManagementPage />
@@ -79,16 +82,39 @@ function App() {
             } 
           />
           <Route 
-            path="/service-browser" 
+            path="/service-provider/packages" 
             element={
-              <ProtectedRoute allowedRoles={['customer']}>
-                <ServiceBrowserPage />
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <PackageManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/service-management" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ServiceManagementAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/users" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserManagementAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/notifications" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminNotifications />
               </ProtectedRoute>
             } 
           />
         </Routes>
-      </Router>
-    </GradientBackground>
+    </CleanBackground>
   );
 }
 

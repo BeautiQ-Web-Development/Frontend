@@ -13,20 +13,20 @@ import {
 import {
   Dashboard as DashboardIcon,
   Store as ServicesIcon,
-  Schedule as AvailabilityIcon,
-  Event as AppointmentsIcon,
-  AccessTime as PostponeIcon,
   Chat as ChatIcon,
   Analytics as PerformanceIcon,
   Payment as RentIcon,
   Person as ProfileIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  ExitToApp as ResignIcon,
+  CardGiftcard as PackageIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const ServiceProviderSidebar = ({ open, onClose, user }) => {
+const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
   const menuItems = [
     {
       text: 'Dashboard',
@@ -38,56 +38,49 @@ const ServiceProviderSidebar = ({ open, onClose, user }) => {
       text: 'My Services',
       icon: <ServicesIcon />,
       path: '/service-provider/services',
-      description: 'Add, edit, and view own services'
+      description: 'View and manage your services'
     },
     {
-      text: 'Availability',
-      icon: <AvailabilityIcon />,
-      path: '/service-provider/availability',
-      description: 'Set and manage working hours'
-    },
-    {
-      text: 'Appointments',
-      icon: <AppointmentsIcon />,
-      path: '/service-provider/appointments',
-      description: 'View upcoming and past bookings'
-    },
-    {
-      text: 'Postpone Requests',
-      icon: <PostponeIcon />,
-      path: '/service-provider/postpone',
-      description: 'Manage customer reschedule requests'
+      text: 'My Packages',
+      icon: <PackageIcon />,
+      path: '/service-provider/packages',
+      description: 'View and manage your packages'
     },
     {
       text: 'Chat',
       icon: <ChatIcon />,
       path: '/service-provider/chat',
-      description: 'Real-time messages with customers'
+      description: 'Real-time messages'
     },
     {
       text: 'Performance',
       icon: <PerformanceIcon />,
       path: '/service-provider/performance',
-      description: 'View service insights and booking stats'
+      description: 'Insights & stats'
     },
     {
       text: 'Rent & Income',
       icon: <RentIcon />,
       path: '/service-provider/rent-income',
-      description: 'Check rent status and income logs'
+      description: 'Check income logs'
     },
     {
-      text: 'Profile',
+      text: 'My Details',
       icon: <ProfileIcon />,
       path: '/service-provider/profile',
-      description: 'Manage provider profile and business details'
+      description: 'Personal & business info'
     }
   ];
 
-  const handleNavigation = (path) => {
-    navigate(path);
+  const handleItemClick = (item) => {
+    if (item.action) {
+      item.action();
+    } else if (item.path) {
+      navigate(item.path);
+    }
     if (onClose) onClose();
   };
+
   return (
     <Drawer
       anchor="left"
@@ -116,8 +109,8 @@ const ServiceProviderSidebar = ({ open, onClose, user }) => {
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              onClick={() => handleNavigation(item.path)}
-              selected={location.pathname === item.path}
+              onClick={() => handleItemClick(item)}
+              selected={item.path && location.pathname === item.path}
               sx={{
                 py: 1.5,
                 '&.Mui-selected': {
@@ -139,7 +132,7 @@ const ServiceProviderSidebar = ({ open, onClose, user }) => {
                 secondary={item.description}
                 sx={{ 
                   '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === item.path ? 'bold' : 'normal',
+                    fontWeight: item.path && location.pathname === item.path ? 'bold' : 'normal',
                     color: '#075B5E',
                     fontSize: '0.95rem'
                   },
@@ -156,6 +149,39 @@ const ServiceProviderSidebar = ({ open, onClose, user }) => {
 
       <Divider sx={{ mx: 2, borderColor: '#075B5E' }} />
       
+      {/* Resignation Button */}
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={onResignation}
+            sx={{
+              py: 1.5,
+              '&:hover': {
+                bgcolor: '#FFEBEE'
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: '#d32f2f', minWidth: 40 }}>
+              <ResignIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Request Resignation"
+              secondary="Leave the platform"
+              sx={{ 
+                '& .MuiListItemText-primary': {
+                  color: '#d32f2f',
+                  fontSize: '0.95rem'
+                },
+                '& .MuiListItemText-secondary': {
+                  color: '#757575',
+                  fontSize: '0.75rem'
+                }
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+      </List>
+
       <Box sx={{ p: 2, mt: 'auto' }}>
         <Typography variant="caption" sx={{ color: '#054548', display: 'block', textAlign: 'center' }}>
           BeautiQ Service Provider Portal

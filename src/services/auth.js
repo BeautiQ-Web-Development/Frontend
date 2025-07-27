@@ -1,24 +1,53 @@
+//frontendCodes : services/auth.js
 import axios from 'axios';
 
-// Define API base URL
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
-
-const API_URL = `${API_BASE_URL}/api`;
+const API_URL = 'http://localhost:5000';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 10000 // 10 second timeout
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`Making ${config.method?.toUpperCase()} request to:`, config.url);
+    return config;
+  },
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.code === 'ERR_NETWORK') {
+      console.error('Network error - Backend server might not be running');
+      error.message = 'Unable to connect to server. Please check if the backend server is running.';
+    } else if (error.code === 'ECONNREFUSED') {
+      console.error('Connection refused - Backend server is not running');
+      error.message = 'Backend server is not running. Please start the server and try again.';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    // Store in memory only, not localStorage
+    localStorage.setItem('token', token);
   } else {
     delete api.defaults.headers.common['Authorization'];
+    localStorage.removeItem('token');
   }
 };
 
@@ -70,53 +99,218 @@ export const login = async (credentials, role) => {
   }
 };
 
-export const register = async (userData, role = 'customer') => {
-  try {
-    console.log('Auth service registration attempt with role:', role);
+export const register = async (data, role) => {
+  const path = role === 'serviceProvider'
+    ? 'register-service-provider'
+    : role === 'admin'
+      ? 'register-admin'
+      : 'register-customer';
+  const endpoint = `/auth/${path}`;
+
+  if (role === 'serviceProvider') {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value instanceof File) {
+        formData.append(key, value);
+      } else if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+        formData.append(key, JSON.stringify(value));
+      } else if (value != null) {
+        formData.append(key, value);
+      }
+    });
+    const res = await api.post(endpoint, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
+  }
+
+  const res = await api.post(endpoint, data);
+  return res.data;
+};
+
+// export const registerServiceProvider = async (userData) => {
+//   try {
+//     // Create FormData for file uploads
+//     const formData = new FormData();
     
-    // Set the role if not already set
-    if (userData instanceof FormData) {
-      if (!userData.has('role')) {
-        userData.append('role', role);
-      }
-      // Debug FormData contents - but filter out file objects for cleaner logs
-      console.log('FormData entries:');
-      for (let [key, value] of userData.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-          console.log(`${key}: ${value}`);
-        }
-      }
-    } else {
-      userData.role = role;
-      console.log('Regular object data:', userData);
+//     // Add basic fields
+//     formData.append('fullName', userData.fullName || '');
+//     formData.append('emailAddress', userData.emailAddress || '');
+//     formData.append('mobileNumber', userData.mobileNumber || '');
+//     formData.append('nicNumber', userData.nicNumber || '');
+//     formData.append('password', userData.password || '');
+//     formData.append('currentAddress', userData.currentAddress || '');
+//     formData.append('homeAddress', userData.homeAddress || '');
+    
+//     // Business fields
+//     formData.append('businessName', userData.businessName || '');
+//     formData.append('businessDescription', userData.businessDescription || '');
+//     formData.append('businessType', userData.businessType || '');
+//     formData.append('city', userData.city || '');
+//     formData.append('experienceYears', userData.experienceYears || '0');
+    
+//     // Transform services to match backend expectations
+//     const transformedServices = userData.services.map(service => ({
+//       name: service.name || '',
+//       type: service.type || '',
+//       category: service.category || '',
+//       description: service.description || '',
+//       price: parseFloat(service.price) || 0,
+//       duration: parseInt(service.duration) || 60,
+//       location: service.location || 'both'
+//     }));
+//     formData.append('services', JSON.stringify(transformedServices));
+    
+//     // Location data
+//     const locationData = {
+//       city: userData.city || '',
+//       serviceArea: userData.businessType === 'mobile_service' ? 'mobile' : 'fixed'
+//     };
+//     formData.append('location', JSON.stringify(locationData));
+    
+//     // Additional data
+//     const specialties = [...new Set(userData.services.map(service => service.type).filter(Boolean))];
+//     formData.append('specialties', JSON.stringify(specialties));
+//     formData.append('languages', JSON.stringify(['English']));
+    
+//     const policiesData = {
+//       cancellation: '24 hours notice required for cancellation',
+//       paymentMethods: ['cash'],
+//       advanceBooking: 30
+//     };
+//     formData.append('policies', JSON.stringify(policiesData));
+    
+//     // File uploads
+//     if (userData.profilePhoto instanceof File) {
+//       formData.append('profilePhoto', userData.profilePhoto);
+//     }
+//     if (userData.nicFrontPhoto instanceof File) {
+//       formData.append('nicFrontPhoto', userData.nicFrontPhoto);
+//     }
+//     if (userData.nicBackPhoto instanceof File) {
+//       formData.append('nicBackPhoto', userData.nicBackPhoto);
+//     }
+
+//     // Add role
+//     formData.append('role', 'serviceProvider');
+
+//     console.log('Service Provider registration attempt:', { email: userData.emailAddress });
+
+//     // use our api instance so CORS, baseURL, timeouts, etc. are applied
+//     const response = await api.post('/auth/register-service-provider', formData, {
+//       headers: { 'Content-Type': 'multipart/form-data' }
+//     });
+    
+//     return response.data;
+//   } catch (error) {
+//     console.error('Service Provider registration error:', error);
+    
+//     if (error.code === 'ERR_NETWORK') {
+//       throw new Error('Unable to connect to server. Please check if the backend server is running on http://localhost:5000');
+//     }
+    
+//     throw error.response?.data || { message: error.message || 'Service provider registration failed' };
+//   }
+// };
+
+// SAFE VERSION: Completely avoids services array processing
+export const registerServiceProviderNoServices = async (formData) => {
+  try {
+    console.log('📝 Starting service provider registration (no services)...');
+    
+    // Validate required fields
+    const requiredFields = ['fullName', 'emailAddress', 'mobileNumber', 'nicNumber', 'password', 'businessName', 'businessType', 'city'];
+    const missingFields = requiredFields.filter(field => !formData[field] || !formData[field].trim());
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    const response = await api.post('/auth/register', userData, {
-      headers: {
-        'Content-Type': userData instanceof FormData ? 'multipart/form-data' : 'application/json',
-      },
-    });
+    // Create clean form data
+    const form = new FormData();
     
-    console.log('Registration successful:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Registration error:', error);
-    console.error('Error response:', error.response?.data);
+    // Personal information
+    form.append('fullName', formData.fullName.trim());
+    form.append('emailAddress', formData.emailAddress.trim());
+    form.append('mobileNumber', formData.mobileNumber.trim());
+    form.append('nicNumber', formData.nicNumber.trim());
+    form.append('password', formData.password);
+    form.append('currentAddress', formData.currentAddress.trim());
+    form.append('homeAddress', formData.homeAddress.trim());
     
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
+    // Business information
+    form.append('businessName', formData.businessName.trim());
+    form.append('businessType', formData.businessType);
+    form.append('city', formData.city.trim());
+    form.append('role', 'serviceProvider');
+    
+    // Optional fields
+    if (formData.businessDescription) {
+      form.append('businessDescription', formData.businessDescription.trim());
+    }
+    if (formData.experienceYears) {
+      form.append('experienceYears', formData.experienceYears);
+    }
+
+    // File uploads with validation
+    if (formData.nicFrontPhoto && formData.nicFrontPhoto instanceof File) {
+      form.append('nicFrontPhoto', formData.nicFrontPhoto);
+    } else {
+      throw new Error('NIC front photo is required');
     }
     
-    throw new Error(error.message || 'Registration failed. Please try again.');
+    if (formData.nicBackPhoto && formData.nicBackPhoto instanceof File) {
+      form.append('nicBackPhoto', formData.nicBackPhoto);
+    } else {
+      throw new Error('NIC back photo is required');
+    }
+    
+    if (formData.profilePhoto && formData.profilePhoto instanceof File) {
+      form.append('profilePhoto', formData.profilePhoto);
+    }
+
+    // Handle certificates array
+    if (formData.certificatesPhotos && Array.isArray(formData.certificatesPhotos)) {
+      formData.certificatesPhotos.forEach((file, index) => {
+        if (file instanceof File) {
+          form.append('certificatesPhotos', file);
+        }
+      });
+    }
+
+    console.log('📝 Sending registration request to server...');
+
+    // FIXED: Use axios api instance correctly
+    const response = await api.post('/auth/register-service-provider', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    console.log('✅ Registration successful:', response.data);
+
+    return {
+      success: true,
+      message: 'Registration submitted successfully! You will be notified once approved and can then add your services.',
+      data: response.data
+    };
+
+  } catch (error) {
+    console.error('❌ Registration error:', error);
+    
+    // Handle axios errors properly
+    const errorMessage = error.response?.data?.message || error.message || 'Registration failed. Please check your information and try again.';
+    
+    return {
+      success: false,
+      message: errorMessage,
+      error: error.name || 'RegistrationError'
+    };
   }
 };
 
 export const requestPasswordReset = async (emailAddress) => {
   try {
     console.log('Requesting password reset for:', emailAddress);
-    const response = await axios.post('http://localhost:5000/api/auth/forgot-password', {
+    const response = await api.post('/auth/forgot-password', {
       emailAddress
     });
     console.log('Password reset response:', response.data);
@@ -158,30 +352,20 @@ export const getProfile = async () => {
 
 export const getPendingProviders = async () => {
   try {
-    const response = await api.get('/auth/pending-service-providers');
+    const response = await api.get('/auth/pending-providers');
     return response.data;
   } catch (error) {
-    console.error('Get pending providers error:', error);
     throw error.response?.data || { message: error.message };
   }
 };
 
-export const getApprovedProviders = async () => {
+export const getApprovedProviders = async (providerId) => {
   try {
-    const response = await api.get('/auth/approved-providers');
+    const qs = providerId ? `?providerId=${providerId}` : '';
+    const response = await api.get(`/auth/approved-service-providers${qs}`);
     return response.data;
   } catch (error) {
-    console.error('Get approved providers error:', error);
-    throw error.response?.data || { message: error.message };
-  }
-};
-
-export const getUserCounts = async () => {
-  try {
-    const response = await api.get('/auth/user-counts');
-    return response.data;
-  } catch (error) {
-    console.error('Get user counts error:', error);
+    console.error('Error fetching approved providers:', error);
     throw error.response?.data || { message: error.message };
   }
 };
@@ -191,27 +375,34 @@ export const approveServiceProvider = async (providerId) => {
     const response = await api.put(`/auth/approve-provider/${providerId}`);
     return response.data;
   } catch (error) {
-    console.error('Approve provider error:', error);
     throw error.response?.data || { message: error.message };
   }
 };
 
-export const getPublicServiceProviders = async () => {
+export const getUserCounts = async () => {
   try {
-    const response = await api.get('/auth/public/service-providers');
+    const response = await api.get('/auth/user-counts');
     return response.data;
   } catch (error) {
-    console.error('Get public service providers error:', error);
     throw error.response?.data || { message: error.message };
   }
 };
 
-export const getApprovedServiceProviders = async () => {
+export const getNotifications = async () => {
   try {
-    const response = await api.get('/auth/approved-service-providers');
+    const response = await api.get('/notifications');
     return response.data;
   } catch (error) {
-    console.error('Get approved service providers error:', error);
+    console.error('Error fetching notifications:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    const response = await api.put(`/notifications/${notificationId}/read`);
+    return response.data;
+  } catch (error) {
     throw error.response?.data || { message: error.message };
   }
 };
@@ -222,16 +413,17 @@ export const logout = () => {
 
 export const verifyToken = async () => {
   try {
-    // Check if token is already set in headers
-    const token = api.defaults.headers.common['Authorization'];
-    if (!token) {
-      throw new Error('No token found');
-    }
-    
-    const response = await api.get('/auth/verify');
+    const response = await api.get('/auth/verify-token');
     return response.data;
   } catch (error) {
     setAuthToken(null);
     throw error.response?.data || { message: error.message };
   }
 };
+
+// expose service helpers on the axios instance
+api.login = login;
+
+// export the axios instance so dashboard can import it as default
+export default api;
+

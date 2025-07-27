@@ -95,12 +95,12 @@ const CustomerSidebar = ({ open, onClose, user }) => {
         '& .MuiDrawer-paper': {
           width: 300,
           bgcolor: '#F8F8FF',
-          borderRight: '1px solid #075B5E',
+          borderRight: '1px solid #003047',
           zIndex: 1300
         }
       }}
     >
-      <Box sx={{ p: 3, bgcolor: '#075B5E' }}>
+      <Box sx={{ p: 3, bgcolor: '#003047' }}>
         <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
           Welcome, {user?.fullName || 'Customer'}
         </Typography>
@@ -128,7 +128,7 @@ const CustomerSidebar = ({ open, onClose, user }) => {
                 }
               }}
             >
-              <ListItemIcon sx={{ color: '#075B5E', minWidth: 40 }}>
+              <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>
                 {item.icon}
               </ListItemIcon>
               <ListItemText 
@@ -137,11 +137,11 @@ const CustomerSidebar = ({ open, onClose, user }) => {
                 sx={{ 
                   '& .MuiListItemText-primary': {
                     fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-                    color: '#075B5E',
+                    color: '#003047',
                     fontSize: '0.95rem'
                   },
                   '& .MuiListItemText-secondary': {
-                    color: '#054548',
+                    color: '#003047',
                     fontSize: '0.75rem'
                   }
                 }}
@@ -151,10 +151,10 @@ const CustomerSidebar = ({ open, onClose, user }) => {
         ))}
       </List>
 
-      <Divider sx={{ mx: 2, borderColor: '#075B5E' }} />
+      <Divider sx={{ mx: 2, borderColor: '#003047' }} />
       
       <Box sx={{ p: 2, mt: 'auto' }}>
-        <Typography variant="caption" sx={{ color: '#054548', display: 'block', textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Customer Portal
         </Typography>
       </Box>

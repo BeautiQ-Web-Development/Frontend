@@ -1,25 +1,56 @@
+//services/services.js - Updated with better error handling and debugging
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
 // Get auth token from localStorage
 const getAuthToken = () => {
-  return localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.warn('No auth token found in localStorage');
+  }
+  return token;
 };
 
 // Create axios instance with auth header
-const createAuthConfig = () => ({
-  headers: {
-    'Authorization': `Bearer ${getAuthToken()}`,
-    'Content-Type': 'application/json'
+const createAuthConfig = () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token found. Please log in again.');
   }
-});
+  
+  return {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  };
+};
+
+// Debug function to check token content
+const debugToken = () => {
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('Current token payload:', payload);
+      return payload;
+    } catch (e) {
+      console.error('Invalid token format:', e);
+      return null;
+    }
+  }
+  return null;
+};
 
 // Service Provider Services API
 export const serviceProviderAPI = {
   // Get all services for current provider
   getMyServices: async (params = {}) => {
     try {
+      console.log('Fetching my services...');
+      debugToken(); // Debug token before request
+      
       const response = await axios.get(`${API_BASE_URL}/services/my-services`, {
         ...createAuthConfig(),
         params
@@ -27,6 +58,9 @@ export const serviceProviderAPI = {
       return response.data;
     } catch (error) {
       console.error('Error fetching services:', error);
+      if (error.response?.status === 403) {
+        console.error('403 Error details:', error.response.data);
+      }
       throw error;
     }
   },
@@ -42,13 +76,56 @@ export const serviceProviderAPI = {
     }
   },
 
-  // Create new service
+  // Create new service - try both endpoints for compatibility
   createService: async (serviceData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/services`, serviceData, createAuthConfig());
+      console.log('Creating service with data:', serviceData);
+      debugToken(); // Debug token before request
+      
+      // Validate required fields before sending
+      if (!serviceData.name?.trim()) {
+        throw new Error('Service name is required');
+      }
+      if (!serviceData.type) {
+        throw new Error('Service type is required');
+      }
+      if (!serviceData.category) {
+        throw new Error('Service category is required');
+      }
+      
+      const config = {
+        ...createAuthConfig(),
+        timeout: 30000
+      };
+
+      let response;
+      try {
+        // Try the /add endpoint first since it's specifically configured
+        console.log('Trying /add endpoint');
+        response = await axios.post(
+          `${API_BASE_URL}/services/add`,
+          serviceData,
+          config
+        );
+      } catch (addError) {
+        console.log('Add endpoint failed, trying primary endpoint:', addError.message);
+        // Fallback to primary endpoint if /add fails
+        response = await axios.post(
+          `${API_BASE_URL}/services`,
+          serviceData,
+          config
+        );
+      }
+      
+      console.log('Service creation response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating service:', error);
+      console.error('Error response:', error.response?.data);
+      if (error.response?.status === 403) {
+        console.error('403 Error - Check if you are logged in as serviceProvider and approved');
+        debugToken();
+      }
       throw error;
     }
   },
@@ -56,10 +133,40 @@ export const serviceProviderAPI = {
   // Update existing service
   updateService: async (serviceId, serviceData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/services/${serviceId}`, serviceData, createAuthConfig());
+      console.log(`Updating service ${serviceId} with data:`, serviceData);
+      debugToken(); // Debug token before request
+      
+      const response = await axios.put(
+        `${API_BASE_URL}/services/${serviceId}`, 
+        serviceData, 
+        {
+          ...createAuthConfig(),
+          timeout: 30000
+        }
+      );
+      
+      console.log('Service update response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error updating service:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 403) {
+        console.error('403 Error details:');
+        console.error('- Message:', error.response.data.message);
+        console.error('- Error code:', error.response.data.error);
+        console.error('- Debug info:', error.response.data.debug);
+        
+        // Check token
+        const tokenPayload = debugToken();
+        if (tokenPayload) {
+          console.error('Token info:');
+          console.error('- User ID:', tokenPayload.userId);
+          console.error('- Role:', tokenPayload.role);
+          console.error('- Approved:', tokenPayload.approved);
+        }
+      }
+      
       throw error;
     }
   },
@@ -92,55 +199,115 @@ export const adminServicesAPI = {
   // Get pending service approvals
   getPendingServices: async () => {
     try {
+      console.log('Fetching pending services from admin API...');
       const response = await axios.get(`${API_BASE_URL}/services/admin/pending`, createAuthConfig());
+      console.log('Pending services response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching pending services:', error);
+      console.error('Error response:', error.response?.data);
       throw error;
     }
   },
 
-  // Get complete service history (including deleted)
-  getServiceHistory: async (providerId = null) => {
+  // Get all services for admin (including pending and approved)
+  getAllServices: async () => {
     try {
-      const params = providerId ? { providerId } : {};
-      const response = await axios.get(`${API_BASE_URL}/services/admin/history`, {
-        ...createAuthConfig(),
-        params
-      });
+      const response = await axios.get(`${API_BASE_URL}/services/admin/all`, createAuthConfig());
       return response.data;
     } catch (error) {
-      console.error('Error fetching service history:', error);
+      console.error('Error fetching all services:', error);
       throw error;
     }
   },
 
   // Approve service changes
-  approveService: async (serviceId, reason = 'Approved by admin') => {
+  approveService: async (serviceId, reason = 'Service approved by admin') => {
     try {
+      console.log(`Approving service ${serviceId} with reason:`, reason);
       const response = await axios.post(
         `${API_BASE_URL}/services/admin/${serviceId}/approve`,
         { reason },
         createAuthConfig()
       );
+      console.log('Approve service response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error approving service:', error);
+      console.error('Error response:', error.response?.data);
       throw error;
     }
   },
 
   // Reject service changes
-  rejectService: async (serviceId, reason) => {
+  rejectService: async (serviceId, reason = 'Service does not meet our quality standards') => {
     try {
+      console.log(`Rejecting service ${serviceId} with reason:`, reason);
       const response = await axios.post(
         `${API_BASE_URL}/services/admin/${serviceId}/reject`,
         { reason },
         createAuthConfig()
       );
+      console.log('Reject service response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error rejecting service:', error);
+      console.error('Error response:', error.response?.data);
+      throw error;
+    }
+  }
+};
+
+// Admin Packages API
+export const adminPackagesAPI = {
+  // Get pending package approvals
+  getPendingPackages: async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/packages/admin/pending`, createAuthConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching pending packages:', error);
+      throw error;
+    }
+  },
+
+  // Get package history
+  getPackageHistory: async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/packages/admin/history`, createAuthConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching package history:', error);
+      throw error;
+    }
+  },
+
+  // Approve package
+  approvePackage: async (packageId, reason = 'Approved by admin') => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/packages/admin/${packageId}/approve`,
+        { reason },
+        createAuthConfig()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error approving package:', error);
+      throw error;
+    }
+  },
+
+  // Reject package
+  rejectPackage: async (packageId, reason) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/packages/admin/${packageId}/reject`,
+        { reason },
+        createAuthConfig()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error rejecting package:', error);
       throw error;
     }
   }
@@ -159,7 +326,7 @@ export const validateServiceData = (serviceData) => {
   }
 
   if (!serviceData.category) {
-    errors.push('Service category is required');
+    errors.push('Target audience is required');
   }
 
   if (!serviceData.description || serviceData.description.trim().length < 10) {
@@ -191,9 +358,10 @@ export const getServiceStatusInfo = (service) => {
   const statusMap = {
     'draft': { label: 'Draft', color: '#9E9E9E', description: 'Service is being prepared' },
     'pending_approval': { label: 'Pending Approval', color: '#FF9800', description: 'Service is awaiting admin approval' },
-    'active': { label: 'Active', color: '#4CAF50', description: 'Service is live and available to customers' },
+    'approved': { label: 'Active', color: '#4CAF50', description: 'Service is live and available to customers' },
     'inactive': { label: 'Inactive', color: '#9E9E9E', description: 'Service is temporarily disabled' },
-    'rejected': { label: 'Rejected', color: '#F44336', description: 'Service was rejected by admin' }
+    'rejected': { label: 'Rejected', color: '#F44336', description: 'Service was rejected by admin' },
+    'deleted': { label: 'Deleted', color: '#F44336', description: 'Service has been deleted' }
   };
 
   return {
@@ -203,9 +371,14 @@ export const getServiceStatusInfo = (service) => {
   };
 };
 
+// Export debug function for manual testing
+export { debugToken };
+
 export default {
   serviceProviderAPI,
   adminServicesAPI,
+  adminPackagesAPI,
   validateServiceData,
-  getServiceStatusInfo
+  getServiceStatusInfo,
+  debugToken
 };
