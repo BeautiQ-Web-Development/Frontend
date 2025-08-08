@@ -17,6 +17,9 @@ import ServiceProviderDashboardPage from './pages/dashboards/serviceProviderDash
 import CustomerDashboardPage from './pages/dashboards/customerDashboardPage';
 import ServiceProviderApprovalSuccessPage from './components/ServiceProviderApprovalSuccess';
 import ServiceManagementPage from './pages/serviceProvider/ServiceProvider.ServiceManagementPage';
+import ServiceProviderServiceButtonsPage from './pages/serviceProvider/ServiceProvider.ServiceButtonsPage';
+// ServiceProviderServiceFormPage uses default export
+import ServiceProviderServiceFormPage from './pages/serviceProvider/ServiceProvider.ServiceFormPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './pages/landingPage';
 import PackageManagement from './pages/serviceProvider/ServiceProvider.PackageManagementPage';
@@ -73,14 +76,31 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/service-provider/services" 
-            element={
-              <ProtectedRoute allowedRoles={['serviceProvider']}>
-                <ServiceManagementPage />
-              </ProtectedRoute>
-            } 
-          />
+        {/* Service Provider Routes */}
+<Route 
+  path="/service-provider/my-services" 
+  element={
+    <ProtectedRoute allowedRoles={['serviceProvider']}>
+      <ServiceProviderServiceButtonsPage />
+    </ProtectedRoute>
+  } 
+/>
+<Route 
+  path="/service-provider/services/new" 
+  element={
+    <ProtectedRoute allowedRoles={['serviceProvider']}>
+      <ServiceProviderServiceFormPage />
+    </ProtectedRoute>
+  } 
+/>
+<Route 
+  path="/service-provider/services" 
+  element={
+    <ProtectedRoute allowedRoles={['serviceProvider']}>
+      <ServiceManagementPage />
+    </ProtectedRoute>
+  } 
+/>
           <Route 
             path="/service-provider/packages" 
             element={

@@ -28,24 +28,31 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
   const location = useLocation();
   
   const menuItems = [
-    {
-      text: 'Dashboard',
-      icon: <DashboardIcon />,
-      path: '/service-provider-dashboard',
-      description: 'Overview of bookings, income, and service status'
-    },
-    {
-      text: 'My Services',
-      icon: <ServicesIcon />,
-      path: '/service-provider/services',
-      description: 'View and manage your services'
-    },
-    {
-      text: 'My Packages',
-      icon: <PackageIcon />,
-      path: '/service-provider/packages',
-      description: 'View and manage your packages'
-    },
+
+  {
+    text: 'Dashboard',
+    icon: <DashboardIcon />,
+    path: '/service-provider-dashboard',
+    description: 'Overview of bookings, income, and service status'
+  },
+  {
+    text: 'My Services',
+    icon: <ServicesIcon />,
+    path: '/service-provider/my-services', // This should navigate to the buttons page
+    description: 'Create and manage your services'
+  },
+  {
+    text: 'Service Management',
+    icon: <PackageIcon />,
+    path: '/service-provider/services', // This goes to the table view
+    description: 'View and manage all services'
+  },
+  {
+    text: 'My Packages',
+    icon: <PackageIcon />,
+    path: '/service-provider/packages',
+    description: 'View and manage your packages'
+  },
     {
       text: 'Chat',
       icon: <ChatIcon />,
