@@ -80,7 +80,7 @@ function App() {
 <Route 
   path="/service-provider/my-services" 
   element={
-    <ProtectedRoute allowedRoles={['serviceProvider']}>
+    <ProtectedRoute allowedRoles={[ 'serviceProvider' ]}>
       <ServiceProviderServiceButtonsPage />
     </ProtectedRoute>
   } 
@@ -88,15 +88,23 @@ function App() {
 <Route 
   path="/service-provider/services/new" 
   element={
-    <ProtectedRoute allowedRoles={['serviceProvider']}>
+    <ProtectedRoute allowedRoles={[ 'serviceProvider' ]}>
       <ServiceProviderServiceFormPage />
     </ProtectedRoute>
   } 
 />
 <Route 
+  path="/service-provider/services/edit/:serviceId" 
+  element={
+    <ProtectedRoute allowedRoles={[ 'serviceProvider' ]}>
+      <ServiceProviderServiceFormPage />
+    </ProtectedRoute>
+  } 
+/>  
+<Route 
   path="/service-provider/services" 
   element={
-    <ProtectedRoute allowedRoles={['serviceProvider']}>
+    <ProtectedRoute allowedRoles={[ 'serviceProvider' ]}>
       <ServiceManagementPage />
     </ProtectedRoute>
   } 

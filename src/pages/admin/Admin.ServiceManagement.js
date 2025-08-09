@@ -157,38 +157,23 @@ const ServiceManagementAdmin = () => {
       setLoading(true);
       console.log('Fetching admin data...');
       
-      const [providersRes, servicesRes, packagesRes, pendingServicesRes] = await Promise.all([
+      const [providersRes, listRes, packagesRes] = await Promise.all([
         api.get('/auth/service-providers'),
-        api.get('/services/admin/all'),
-        api.get('/packages/admin/history'),
-        api.get('/services/admin/pending')
+        api.get('/services/admin/all'), // use 'all' endpoint instead of 'list'
+        api.get('/packages/admin/history')
       ]);
 
       console.log('Providers response:', providersRes.data);
-      console.log('Services response:', servicesRes.data);
-      console.log('Pending services response:', pendingServicesRes.data);
+      console.log('Services list response:', listRes.data);
 
       if (providersRes.data.success) {
         setServiceProviders(providersRes.data.providers || providersRes.data.data || []);
       }
       
-      if (servicesRes.data.success) {
-        const allServices = servicesRes.data.services || servicesRes.data.data || [];
-        const pendingServices = pendingServicesRes.data.success ? 
-          (pendingServicesRes.data.pendingServices || pendingServicesRes.data.data || []) : [];
-        
-        const validServices = allServices.filter(service => service != null);
-        const validPendingServices = pendingServices.filter(service => service != null);
-        
-        const combinedServices = [...validServices];
-        validPendingServices.forEach(pendingService => {
-          if (!combinedServices.find(s => s._id === pendingService._id)) {
-            combinedServices.push(pendingService);
-          }
-        });
-        
-        setServices(combinedServices);
-        console.log(`Total services loaded: ${combinedServices.length}`);
+      if (listRes.data.success) {
+        // listRes.data.services includes new/update/delete requests with labels
+        setServices(listRes.data.services || []);
+        console.log(`Total services loaded: ${listRes.data.services.length}`);
       }
       
       if (packagesRes.data.success) {
@@ -298,6 +283,28 @@ const ServiceManagementAdmin = () => {
         }}
       />
     );
+  };
+  
+  
+  // Helper to display request type or availability based on service status and pendingChanges
+  const getRequestTypeChip = (service) => {
+    if (service.status === 'pending_approval' && !service.pendingChanges) {
+      return <Chip label="New Service" color="warning" size="small" sx={{ fontWeight: 600 }} />;
+    }
+    if (service.pendingChanges?.actionType === 'update') {
+      return <Chip label="Update Needed" color="secondary" size="small" sx={{ fontWeight: 600 }} />;
+    }
+    if (service.pendingChanges?.actionType === 'delete') {
+      return <Chip label="Delete Requested" color="error" size="small" sx={{ fontWeight: 600 }} />;
+    }
+    if (service.status === 'deleted') {
+      return <Chip label="Deleted - No Longer Available" color="default" size="small" sx={{ fontWeight: 600, backgroundColor: '#616161', color: 'white' }} />;
+    }
+    if (service.status === 'approved' && service.isActive) {
+      return <Chip label="Available" color="success" size="small" sx={{ fontWeight: 600 }} />;
+    }
+    // fallback to status chip
+    return getStatusChip(service.status);
   };
 
   const formatDate = (dateString) => {
@@ -800,11 +807,7 @@ const ServiceManagementAdmin = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={service?.availabilityStatus || 'Available'} 
-                        color={(service?.availabilityStatus || 'Available') === 'Available' ? 'success' : 'error'} 
-                        size="small" 
-                      />
+                      {getRequestTypeChip(service)}
                     </TableCell>
                     <TableCell>{getStatusChip(service.status)}</TableCell>
                     <TableCell align="center">
@@ -817,7 +820,7 @@ const ServiceManagementAdmin = () => {
                       >
                         <ViewIcon />
                       </IconButton>
-                      {service.status === 'pending_approval' && (
+                      {(service.status === 'pending_approval' || service.pendingChanges) && (
                         <>
                           <IconButton 
                             onClick={(e) => {

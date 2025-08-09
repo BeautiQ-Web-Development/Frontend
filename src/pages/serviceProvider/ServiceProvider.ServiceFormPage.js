@@ -29,7 +29,7 @@ import {
   Send as SendIcon,
   Lock as LockIcon
 } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ServiceProviderSidebar from '../../components/ServiceProviderSidebar';
 import Footer from '../../components/footer';
@@ -39,6 +39,7 @@ const ServiceProviderServiceFormPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { serviceId } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Extract category from URL params
@@ -90,6 +91,50 @@ const ServiceProviderServiceFormPage = () => {
       }));
     }
   }, [selectedCategory]);
+  
+  // If editing, fetch existing service details and populate form
+  useEffect(() => {
+    if (!serviceId) return;
+    const fetchService = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(
+          `http://localhost:5000/api/services/${serviceId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (response.data.success) {
+          const svc = response.data.service;
+          setFormData({
+            name: svc.name || '',
+            type: svc.type || '',
+            category: svc.category || '',
+            description: svc.description || '',
+            duration: svc.duration || 60,
+            experienceLevel: svc.experienceLevel || 'beginner',
+            pricing: {
+              basePrice: svc.pricing.basePrice?.toString() || '',
+              priceType: svc.pricing.priceType || 'fixed'
+            },
+            serviceLocation: svc.serviceLocation || 'both',
+            customNotes: svc.customNotes || '',
+            preparationRequired: svc.preparationRequired || '',
+            cancellationPolicy: svc.cancellationPolicy || '24 hours notice required',
+            minLeadTime: svc.minLeadTime || 2,
+            maxLeadTime: svc.maxLeadTime || 30
+          });
+        } else {
+          setError('Failed to load service details');
+        }
+      } catch (err) {
+        console.error('Error loading service for edit:', err);
+        setError('Error loading service for editing');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchService();
+  }, [serviceId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,13 +203,17 @@ const ServiceProviderServiceFormPage = () => {
 
       console.log('🔍 Submitting service data to backend:', submissionData);
 
-      // FIXED: Use consistent API endpoint
-      const response = await axios.post(
-        'http://localhost:5000/api/services/add', 
+      // Choose endpoint and method based on edit or create
+      const url = serviceId
+        ? `http://localhost:5000/api/services/${serviceId}`
+        : 'http://localhost:5000/api/services/add';
+      const method = serviceId ? 'put' : 'post';
+      const response = await axios[method](
+        url,
         submissionData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           timeout: 30000
@@ -175,37 +224,16 @@ const ServiceProviderServiceFormPage = () => {
 
       if (response.data.success) {
         setSuccess(
-          `${formData.name} service has been submitted successfully! ` +
-          `It is now pending admin approval. You will receive an email notification ` +
-          `once the admin reviews your submission.`
+          serviceId
+            ? 'Service updated successfully.'
+            : `${formData.name} service has been submitted successfully! It is now pending admin approval.`
         );
-        
-        // Clear form
-        setFormData({
-          name: '',
-          type: selectedCategory || '',
-          category: '',
-          description: '',
-          duration: 60,
-          experienceLevel: 'beginner',
-          pricing: {
-            basePrice: '',
-            priceType: 'fixed'
-          },
-          serviceLocation: 'both',
-          customNotes: '',
-          preparationRequired: '',
-          cancellationPolicy: '24 hours notice required',
-          minLeadTime: 2,
-          maxLeadTime: 30
-        });
-        
-        // Navigate back to services page after 3 seconds
+        // After update or submission, navigate back
         setTimeout(() => {
-          navigate('/service-provider/my-services');
-        }, 3000);
+          navigate(serviceId ? '/service-provider/services' : '/service-provider/my-services');
+        }, 2000);
       } else {
-        throw new Error(response.data.message || 'Failed to submit service');
+        throw new Error(response.data.message || 'Failed to save service');
       }
     } catch (err) {
       console.error('🔍 Service submission error:', err);
@@ -365,7 +393,7 @@ const ServiceProviderServiceFormPage = () => {
             <ArrowBackIcon fontSize="small" />
             My Services
           </Link>
-          <Typography color="text.primary">Create New Service</Typography>
+          <Typography color="text.primary">{serviceId ? 'Edit Service' : 'Create New Service'}</Typography>
         </Breadcrumbs>
 
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
@@ -374,7 +402,7 @@ const ServiceProviderServiceFormPage = () => {
               color: '#003047', 
               fontWeight: 'bold'
             }}>
-              Create New Service
+              {serviceId ? 'Edit Service' : 'Create New Service'}
             </Typography>
             {selectedCategory && (
               <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
@@ -637,13 +665,13 @@ const ServiceProviderServiceFormPage = () => {
                     variant="contained"
                     size="large"
                     disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
+                    startIcon={loading ? <CircularProgress size={20} /> : (serviceId ? <SaveIcon /> : <SendIcon />)}
                     sx={{
                       bgcolor: '#003047',
                       '&:hover': { bgcolor: '#075B5E' }
                     }}
                   >
-                    {loading ? 'Submitting...' : 'Submit for Approval'}
+                    {loading ? (serviceId ? 'Updating...' : 'Submitting...') : (serviceId ? 'Update Service' : 'Submit for Approval')}
                   </Button>
                 </Box>
               </Grid>

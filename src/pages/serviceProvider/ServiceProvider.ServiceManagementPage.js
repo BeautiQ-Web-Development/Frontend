@@ -95,10 +95,7 @@ const [successDialog, setSuccessDialog] = useState({ open: false, message: '', t
   });
 
   const serviceTypes = [
-    'Hairstyle', 'Haircuts', 'Hair Color', 'Nail Art', 'Manicure', 'Pedicure',
-    'Makeup', 'Bridal Makeup', 'Party Makeup', 'Threading', 'Eyebrow Shaping', 'Facial', 'Skincare', 'Massage', 
-    'Saree Draping', 'Hair Extensions', 'Keratin Treatment', 'Hair Wash', 
-    'Head Massage', 'Mehendi/Henna', 'Other'
+ 'Hairstyle', 'Haircuts', 'Face Makeup', 'Nail Art','Saree Drapping', 'Eye Makeup'
   ];
 
   const targetAudiences = ['Women', 'Men', 'Kids', 'Unisex'];
@@ -474,7 +471,7 @@ const [successDialog, setSuccessDialog] = useState({ open: false, message: '', t
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: '#FFFFFF', fontWeight: 600 }}>
-            BeautiQ Service Provider Dashboard
+            Service Registration Page
           </Typography>
           <Button 
             onClick={handleLogout}
@@ -630,52 +627,49 @@ const [successDialog, setSuccessDialog] = useState({ open: false, message: '', t
           </Table>
         </StyledTableContainer>
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              resetServiceForm();
-              setOpenServiceDialog(true);
-            }}
-            sx={{
-              bgcolor: '#003047',
-              '&:hover': { bgcolor: '#003047' },
-              borderRadius: 2,
-              px: 3,
-              py: 1
-            }}
-          >
-            Add New Service
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            disabled={selectedServices.length !== 1}
-            onClick={() => handleEditService(selectedServices[0])}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1
-            }}
-          >
-            Edit Service
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            disabled={selectedServices.length === 0}
-            onClick={handleDeleteSelectedServices}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1
-            }}
-          >
-            Delete Selected
-          </Button>
-        </Box>
+       <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+  <Button
+    variant="contained"
+    startIcon={<AddIcon />}
+    onClick={() => navigate('/service-provider/my-services')}
+    sx={{
+      bgcolor: '#003047',
+      '&:hover': { bgcolor: '#075B5E' },
+      borderRadius: 2,
+      px: 3,
+      py: 1
+    }}
+  >
+    Create New Service
+  </Button>
+  <Button
+    variant="outlined"
+    startIcon={<EditIcon />}
+    disabled={selectedServices.length !== 1}
+    onClick={() => navigate(`/service-provider/services/edit/${selectedServices[0]}`)}
+    sx={{
+      borderRadius: 2,
+      px: 3,
+      py: 1
+    }}
+  >
+    Edit Service
+  </Button>
+  <Button
+    variant="outlined"
+    color="error"
+    startIcon={<DeleteIcon />}
+    disabled={selectedServices.length === 0}
+    onClick={handleDeleteSelectedServices}
+    sx={{
+      borderRadius: 2,
+      px: 3,
+      py: 1
+    }}
+  >
+    Delete Selected
+  </Button>
+</Box>
 
         {/* Service Dialog */}
         <Dialog 

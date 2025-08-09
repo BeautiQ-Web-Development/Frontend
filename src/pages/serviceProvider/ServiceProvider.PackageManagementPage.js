@@ -1787,8 +1787,8 @@ const PackageManagement = () => {
         {/* Packages Table */}
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
           <CardContent sx={{ p: 0 }}>
-            <StyledTableContainer>
-              <Table>
+            <StyledTableContainer sx={{ overflowX: 'auto' }}>
+              <Table sx={{ minWidth: 1000 }}>
                 <TableHead>
                   <TableRow>
                     <HeaderCell>Package Details</HeaderCell>
