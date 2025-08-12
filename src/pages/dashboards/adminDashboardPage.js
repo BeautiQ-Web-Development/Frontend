@@ -11,7 +11,8 @@ import {
   Paper,
   Card,
   CardContent,
-  Avatar
+  Avatar,
+  TableContainer
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -55,6 +56,35 @@ const GlassCard = styled(Card)(({ theme }) => ({
     transform: 'translateY(-2px)',
     boxShadow: '0 4px 16px rgba(0, 31, 63, 0.12)',
   }
+}));
+
+const ResponsiveTableContainer = styled(TableContainer)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  overflow: 'auto',
+  marginBottom: theme.spacing(3),
+  // Set minimum width for horizontal scrolling
+  '& .MuiTable-root': {
+    minWidth: 750,
+  },
+  // Enhanced scrollbar styling
+  '&::-webkit-scrollbar': {
+    height: 8,
+    width: 8,
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 4,
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: 'rgba(0,48,71,0.3)',
+    borderRadius: 4,
+    '&:hover': {
+      backgroundColor: 'rgba(0,48,71,0.5)',
+    },
+  },
+  // Add smooth scrolling
+  scrollBehavior: 'smooth',
 }));
 
 const AdminDashboard = () => {

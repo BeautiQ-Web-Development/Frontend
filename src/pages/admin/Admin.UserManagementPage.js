@@ -50,8 +50,30 @@ import { styled } from '@mui/material/styles';
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 2,
   boxShadow: '0 12px 28px rgba(0,0,0,0.15)',
-  overflow: 'hidden',
-  border: '1px solid rgba(7, 91, 94, 0.1)'
+  overflow: 'auto', // Changed from 'hidden' to 'auto'
+  border: '1px solid rgba(7, 91, 94, 0.1)',
+  // Set minimum width for horizontal scrolling
+  '& .MuiTable-root': {
+    minWidth: 1100,
+  },
+  // Enhanced scrollbar styling
+  '&::-webkit-scrollbar': {
+    height: 8,
+    width: 8,
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 4,
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: 'rgba(0,48,71,0.3)',
+    borderRadius: 4,
+    '&:hover': {
+      backgroundColor: 'rgba(0,48,71,0.5)',
+    },
+  },
+  // Add smooth scrolling
+  scrollBehavior: 'smooth',
 }));
 
 const HeaderCell = styled(TableCell)(({ theme }) => ({

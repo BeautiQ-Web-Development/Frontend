@@ -22,7 +22,7 @@ import ServiceProviderServiceButtonsPage from './pages/serviceProvider/ServicePr
 import ServiceProviderServiceFormPage from './pages/serviceProvider/ServiceProvider.ServiceFormPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './pages/landingPage';
-import PackageManagement from './pages/serviceProvider/ServiceProvider.PackageManagementPage';
+// import PackageManagement from './pages/serviceProvider/ServiceProvider.PackageManagementPage';
 import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
 import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
@@ -108,15 +108,15 @@ function App() {
       <ServiceManagementPage />
     </ProtectedRoute>
   } 
-/>
-          <Route 
+ />
+          {/* <Route 
             path="/service-provider/packages" 
             element={
               <ProtectedRoute allowedRoles={['serviceProvider']}>
                 <PackageManagement />
               </ProtectedRoute>
             } 
-          />
+          />  */}
           <Route 
             path="/admin/service-management" 
             element={

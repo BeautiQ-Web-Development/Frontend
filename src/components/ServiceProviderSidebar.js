@@ -47,12 +47,12 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
     path: '/service-provider/services', // This goes to the table view
     description: 'View and manage all services'
   },
-  {
-    text: 'My Packages',
-    icon: <PackageIcon />,
-    path: '/service-provider/packages',
-    description: 'View and manage your packages'
-  },
+  // {
+  //   text: 'My Packages',
+  //   icon: <PackageIcon />,
+  //   path: '/service-provider/packages',
+  //   description: 'View and manage your packages'
+  // },
     {
       text: 'Chat',
       icon: <ChatIcon />,
