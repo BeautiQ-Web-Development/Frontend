@@ -1,5 +1,5 @@
 // admin/Admin.ServiceManagement.js - COMPLETELY FIXED VERSION
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import {
   Box,
   Container,
@@ -30,7 +30,8 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  CircularProgress
+  CircularProgress,
+  Slide
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -86,7 +87,7 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
     backgroundColor: 'rgba(0,48,71,0.3)',
     borderRadius: 4,
     '&:hover': {
-      backgroundColor: 'rgba(0,48,71,0.5)',
+      backgroundColor: '#00003f',
     },
   },
   scrollBehavior: 'smooth',
@@ -132,6 +133,10 @@ const StyledTableRow = styled(TableRow)(({ theme, status }) => {
     }
   };
 });
+
+const Transition = forwardRef((props, ref) => (
+  <Slide direction="up" ref={ref} {...props} />
+));
 
 const ServiceManagementAdmin = () => {
   const { user, logout } = useAuth();
@@ -950,26 +955,47 @@ const ServiceManagementAdmin = () => {
           </CardContent>
         </Card>
 
-        {/* Details Dialog */}
-        <Dialog 
-          open={detailsDialog.open} 
+        {/* DETAILS DIALOG */}
+        <Dialog
+          TransitionComponent={Transition}
+          keepMounted
+          open={detailsDialog.open}
           onClose={() => setDetailsDialog({ open: false, item: null, type: '' })}
           maxWidth="lg"
           fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              boxShadow: '0 12px 24px rgba(0,0,0,0.2)',
+              border: '1px solid rgba(0,0,0,0.1)',
+              overflow: 'hidden'
+            }
+          }}
         >
-          <DialogTitle sx={{ 
-            bgcolor: detailsDialog.item?.status === 'deleted' ? '#f44336' :
-                     detailsDialog.item?.status === 'rejected' ? '#f44336' :
-                     detailsDialog.item?.approvalStatus === 'rejected' ? '#f44336' : '#003047', 
-            color: 'white', 
-            fontWeight: 700 
-          }}>
-            {detailsDialog.type === 'provider' ? '👤 Complete Service Provider Registration Details' :
-             detailsDialog.type === 'service' ? '🔧 Service Details' : ''}
-            {(detailsDialog.item?.status === 'deleted' || detailsDialog.item?.status === 'rejected' || 
-              detailsDialog.item?.approvalStatus === 'rejected') && ' - REJECTED/DELETED'}
+          <DialogTitle
+            sx={{
+              background: 'linear-gradient(135deg, #075B5E 0%, #003047 100%)',
+              color: 'white',
+              fontSize: '1.75rem',
+              fontWeight: 700,
+              py: 2,
+              px: 3
+            }}
+          >
+            {detailsDialog.type === 'provider'
+              ? '👤 Provider Details'
+              : '🔧 Service Details'}
           </DialogTitle>
-          <DialogContent sx={{ p: 3 }}>
+          <DialogContent
+            sx={{
+              backgroundColor: '#fff',
+              p: 4,
+              maxHeight: '70vh',
+              overflowY: 'auto',
+              '&::-webkit-scrollbar': { width: 6 },
+              '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 3 }
+            }}
+          >
             
             {/* SERVICE PROVIDER DETAILS */}
             {detailsDialog.item && detailsDialog.type === 'provider' && (
@@ -1251,6 +1277,28 @@ const ServiceManagementAdmin = () => {
                   <Typography variant="body1">
                     {detailsDialog.item.serviceProvider?.businessName || detailsDialog.item.serviceProvider?.fullName || 'N/A'}
                   </Typography>
+                </Grid>
+
+                {/* ENHANCED: Additional service fields */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Price Type</Typography>
+                  <Typography variant="body1">LKR {detailsDialog.item.pricing?.priceType || 'N/A'}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Experience Level</Typography>
+                  <Typography variant="body1">{detailsDialog.item.experienceLevel || 'N/A'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Preparation Required</Typography>
+                  <Typography variant="body1">{detailsDialog.item.preparationRequired || 'None'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Custom Notes</Typography>
+                  <Typography variant="body1">{detailsDialog.item.customNotes || 'None'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Cancellation Policy</Typography>
+                  <Typography variant="body1">{detailsDialog.item.cancellationPolicy || 'Standard'}</Typography>
                 </Grid>
 
                 {detailsDialog.item.rejectionReason && (

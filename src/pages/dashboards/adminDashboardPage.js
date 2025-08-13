@@ -80,7 +80,7 @@ const ResponsiveTableContainer = styled(TableContainer)(({ theme }) => ({
     backgroundColor: 'rgba(0,48,71,0.3)',
     borderRadius: 4,
     '&:hover': {
-      backgroundColor: 'rgba(0,48,71,0.5)',
+      backgroundColor: '#00003f',
     },
   },
   // Add smooth scrolling

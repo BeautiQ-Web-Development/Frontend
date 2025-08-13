@@ -72,7 +72,7 @@
 //     backgroundColor: 'rgba(0,48,71,0.3)',
 //     borderRadius: 4,
 //     '&:hover': {
-//       backgroundColor: 'rgba(0,48,71,0.5)',
+//       backgroundColor: '#00003f',
 //     },
 //   },
 //   // Add smooth scrolling
@@ -883,25 +883,50 @@
 //           title={successDialog.title}
 //         />
 
-//         {/* Service Details Dialog */}
+//         {/* Enhanced Service Details Dialog */}
 //         <Dialog
 //           open={serviceDetailsDialog.open}
 //           onClose={() => setServiceDetailsDialog({ open: false, service: null })}
 //           maxWidth="md"
 //           fullWidth
 //           PaperProps={{
-//             sx: { borderRadius: 2 }
+//             sx: {
+//               borderRadius: 4,
+//               boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
+//               background: 'linear-gradient(135deg, #ffffff, #f0f2f5)',
+//               overflow: 'hidden',
+//               transition: 'all 0.3s ease-in-out'
+//             }
 //           }}
 //         >
-//           <DialogTitle sx={{ 
-//             bgcolor: serviceDetailsDialog.service?.status === 'rejected' ? '#f44336' : 
-//                      serviceDetailsDialog.service?.status === 'approved' ? '#4caf50' : '#ff9800', 
-//             color: 'white',
-//             py: 2
-//           }}>
+//           <DialogTitle
+//             sx={{
+//               bgcolor: serviceDetailsDialog.service?.status === 'rejected' 
+//                       ? '#f44336' 
+//                       : serviceDetailsDialog.service?.status === 'approved' 
+//                         ? '#4caf50' 
+//                         : '#616161',
+//               color: '#fff',
+//               display: 'flex',
+//               alignItems: 'center',
+//               gap: 1,
+//               py: 2,
+//               px: 3,
+//               fontSize: '1.5rem',
+//               fontWeight: 600
+//             }}
+//           >
+//             <InfoIcon fontSize="large" />
 //             Service Details: {serviceDetailsDialog.service?.name}
 //           </DialogTitle>
-//           <DialogContent sx={{ p: 3, pt: 3 }}>
+//           <DialogContent
+//             sx={{
+//               backgroundColor: '#fafbfc',
+//               p: 4,
+//               '& .MuiTypography-subtitle2': { color: '#666', fontWeight: 500 },
+//               '& .MuiTypography-body1':    { color: '#333' }
+//             }}
+//           >
 //             {serviceDetailsDialog.service && (
 //               <Grid container spacing={3}>
 //                 <Grid item xs={12} sm={6}>
@@ -963,28 +988,14 @@
 //                   <Typography variant="subtitle2" color="text.secondary">Availability</Typography>
 //                   <Box sx={{ mb: 2 }}>
 //                     <Chip 
-//                       label={serviceDetailsDialog.service.availabilityStatus || 'Available'} 
-//                       color={(serviceDetailsDialog.service.availabilityStatus || 'Available') === 'Available' ? 'success' : 'error'} 
+//                       label={serviceDetailsDialog.service.normalizedAvailability || 'Available'} 
+//                       color={(serviceDetailsDialog.service.normalizedAvailability || 'Available') === 'Available' ? 'success' : 'error'} 
 //                       size="small" 
 //                     />
 //                   </Box>
 //                 </Grid>
-//                 <Grid item xs={12} sm={6}>
-//                   <Typography variant="subtitle2" color="text.secondary">First Submitted</Typography>
-//                   <Typography variant="body1" sx={{ mb: 2 }}>
-//                     {serviceDetailsDialog.service.firstSubmittedAt ? 
-//                       formatDate(serviceDetailsDialog.service.firstSubmittedAt) : 'N/A'}
-//                   </Typography>
-//                 </Grid>
-//                 <Grid item xs={12} sm={6}>
-//                   <Typography variant="subtitle2" color="text.secondary">Last Updated</Typography>
-//                   <Typography variant="body1" sx={{ mb: 2 }}>
-//                     {serviceDetailsDialog.service.lastUpdatedAt ? 
-//                       formatDate(serviceDetailsDialog.service.lastUpdatedAt) : 'N/A'}
-//                   </Typography>
-//                 </Grid>
                 
-//                 {/* Rejection details section */}
+//                 {/* Enhanced rejection details section */}
 //                 {serviceDetailsDialog.service.status === 'rejected' && (
 //                   <Grid item xs={12}>
 //                     <Paper sx={{ p: 3, bgcolor: '#ffebee', borderRadius: 2, mt: 1 }}>
@@ -1016,7 +1027,7 @@
 //                   </Grid>
 //                 )}
                 
-//                 {/* Pending Changes section if applicable */}
+//                 {/* Pending Changes section */}
 //                 {serviceDetailsDialog.service.pendingChanges && (
 //                   <Grid item xs={12}>
 //                     <Paper sx={{ p: 3, bgcolor: '#fff8e1', borderRadius: 2, mt: 1 }}>
@@ -1029,6 +1040,37 @@
 //                     </Paper>
 //                   </Grid>
 //                 )}
+//                 {/* ENHANCED: Additional fields */}
+//                 <Grid item xs={12} sm={6}>
+//                   <Typography variant="subtitle2" color="text.secondary">Price Type</Typography>
+//                   <Typography variant="body1" sx={{ mb: 2 }}>
+//                     {serviceDetailsDialog.service.pricing?.priceType || 'N/A'}
+//                   </Typography>
+//                 </Grid>
+//                 <Grid item xs={12} sm={6}>
+//                   <Typography variant="subtitle2" color="text.secondary">Experience Level</Typography>
+//                   <Typography variant="body1" sx={{ mb: 2 }}>
+//                     {serviceDetailsDialog.service.experienceLevel || 'N/A'}
+//                   </Typography>
+//                 </Grid>
+//                 <Grid item xs={12}>
+//                   <Typography variant="subtitle2" color="text.secondary">Preparation Required</Typography>
+//                   <Typography variant="body1" sx={{ mb: 2 }}>
+//                     {serviceDetailsDialog.service.preparationRequired || 'None'}
+//                   </Typography>
+//                 </Grid>
+//                 <Grid item xs={12}>
+//                   <Typography variant="subtitle2" color="text.secondary">Custom Notes</Typography>
+//                   <Typography variant="body1" sx={{ mb: 2 }}>
+//                     {serviceDetailsDialog.service.customNotes || 'None'}
+//                   </Typography>
+//                 </Grid>
+//                 <Grid item xs={12}>
+//                   <Typography variant="subtitle2" color="text.secondary">Cancellation Policy</Typography>
+//                   <Typography variant="body1" sx={{ mb: 2 }}>
+//                     {serviceDetailsDialog.service.cancellationPolicy || 'Standard'}
+//                   </Typography>
+//                 </Grid>
 //               </Grid>
 //             )}
 //           </DialogContent>
@@ -1114,6 +1156,7 @@ import ServiceProviderSidebar from '../../components/ServiceProviderSidebar';
 import api from '../../services/auth';
 import { styled } from '@mui/material/styles';
 import SuccessDialog from '../../components/SuccessDialog';
+import InfoIcon from '@mui/icons-material/Info';
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius,
@@ -1134,7 +1177,7 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
     backgroundColor: 'rgba(0,48,71,0.3)',
     borderRadius: 4,
     '&:hover': {
-      backgroundColor: 'rgba(0,48,71,0.5)',
+      backgroundColor: '#00003f',
     },
   },
   scrollBehavior: 'smooth',
@@ -1918,7 +1961,7 @@ const ServiceManagement = () => {
           </Button>
         </Box>
 
-        {/* Service Dialog - Same as before */}
+        {/* Service Dialog */}
         <Dialog 
           open={openServiceDialog} 
           onClose={() => setOpenServiceDialog(false)} 
@@ -1928,7 +1971,103 @@ const ServiceManagement = () => {
             sx: { borderRadius: 3, boxShadow: '0 16px 32px rgba(0,0,0,0.2)' }
           }}
         >
-          {/* Dialog content unchanged */}
+          <DialogTitle>
+            {editingService ? 'Edit Service' : 'Add New Service'}
+          </DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Service Name"
+                  value={serviceFormData.serviceName}
+                  onChange={(e) => setServiceFormData({...serviceFormData, serviceName: e.target.value})}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Service Type</InputLabel>
+                  <Select
+                    value={serviceFormData.serviceType}
+                    onChange={(e) => {
+                      setServiceFormData({...serviceFormData, serviceType: e.target.value, serviceSubType: ''});
+                      fetchServiceSubtypes(e.target.value);
+                    }}
+                  >
+                    {serviceTypes.map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Target Audience</InputLabel>
+                  <Select
+                    value={serviceFormData.targetAudience}
+                    onChange={(e) => setServiceFormData({...serviceFormData, targetAudience: e.target.value})}
+                  >
+                    {targetAudiences.map((audience) => (
+                      <MenuItem key={audience} value={audience}>{audience}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Service Style</InputLabel>
+                  <Select
+                    value={serviceFormData.serviceSubType}
+                    onChange={(e) => setServiceFormData({...serviceFormData, serviceSubType: e.target.value})}
+                  >
+                    {serviceStyles.map((style) => (
+                      <MenuItem key={style} value={style}>{style}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Detailed Description"
+                  value={serviceFormData.detailedDescription}
+                  onChange={(e) => setServiceFormData({...serviceFormData, detailedDescription: e.target.value})}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Duration (minutes)"
+                  value={serviceFormData.duration ?? ''}
+                  onChange={(e) =>
+                    setServiceFormData({
+                      ...serviceFormData,
+                      duration:
+                        e.target.value === '' ? '' : parseInt(e.target.value, 10)
+                    })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Base Price (LKR)"
+                  value={serviceFormData.basePrice}
+                  onChange={(e) => setServiceFormData({...serviceFormData, basePrice: e.target.value})}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenServiceDialog(false)}>Cancel</Button>
+            <Button onClick={handleServiceSubmit} variant="contained" disabled={loading}>
+              {loading ? 'Saving...' : 'Save Service'}
+            </Button>
+          </DialogActions>
         </Dialog>
 
         {/* Success Dialog */}
@@ -1946,22 +2085,45 @@ const ServiceManagement = () => {
           maxWidth="md"
           fullWidth
           PaperProps={{
-            sx: { borderRadius: 2 }
+            sx: {
+              borderRadius: 4,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
+              background: 'linear-gradient(135deg, #ffffff, #f0f2f5)',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease-in-out'
+            }
           }}
         >
-          <DialogTitle sx={{ 
-            bgcolor: serviceDetailsDialog.service?.status === 'rejected' ? '#f44336' : 
-                     serviceDetailsDialog.service?.status === 'approved' ? '#4caf50' : 
-                     serviceDetailsDialog.service?.status === 'deleted' ? '#616161' : '#ff9800', 
-            color: 'white',
-            py: 2
-          }}>
+          <DialogTitle
+            sx={{
+              bgcolor: serviceDetailsDialog.service?.status === 'rejected' 
+                      ? '#f44336' 
+                      : serviceDetailsDialog.service?.status === 'approved' 
+                        ? '#4caf50' 
+                        : '#616161',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              py: 2,
+              px: 3,
+              fontSize: '1.5rem',
+              fontWeight: 600
+            }}
+          >
+            <InfoIcon fontSize="large" />
             Service Details: {serviceDetailsDialog.service?.name}
           </DialogTitle>
-          <DialogContent sx={{ p: 3, pt: 3 }}>
+          <DialogContent
+            sx={{
+              backgroundColor: '#fafbfc',
+              p: 4,
+              '& .MuiTypography-subtitle2': { color: '#666', fontWeight: 500 },
+              '& .MuiTypography-body1':    { color: '#333' }
+            }}
+          >
             {serviceDetailsDialog.service && (
               <Grid container spacing={3}>
-                {/* Enhanced service details display */}
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">Service Name</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500, mb: 2 }}>
@@ -2073,6 +2235,37 @@ const ServiceManagement = () => {
                     </Paper>
                   </Grid>
                 )}
+                {/* ENHANCED: Additional fields */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Price Type</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {serviceDetailsDialog.service.pricing?.priceType || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Experience Level</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {serviceDetailsDialog.service.experienceLevel || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Preparation Required</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {serviceDetailsDialog.service.preparationRequired || 'None'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Custom Notes</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {serviceDetailsDialog.service.customNotes || 'None'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Cancellation Policy</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {serviceDetailsDialog.service.cancellationPolicy || 'Standard'}
+                  </Typography>
+                </Grid>
               </Grid>
             )}
           </DialogContent>
