@@ -1,4 +1,3 @@
-//frontendcode -  pages/admin/Admin.UserManagementPage.js
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -50,8 +49,27 @@ import { styled } from '@mui/material/styles';
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 2,
   boxShadow: '0 12px 28px rgba(0,0,0,0.15)',
-  overflow: 'hidden',
-  border: '1px solid rgba(7, 91, 94, 0.1)'
+  overflow: 'auto',
+  border: '1px solid rgba(7, 91, 94, 0.1)',
+  '& .MuiTable-root': {
+    minWidth: 1100,
+  },
+  '&::-webkit-scrollbar': {
+    height: 8,
+    width: 8,
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 4,
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: 'rgba(0,48,71,0.3)',
+    borderRadius: 4,
+    '&:hover': {
+      backgroundColor: '#00003f',
+    },
+  },
+  scrollBehavior: 'smooth',
 }));
 
 const HeaderCell = styled(TableCell)(({ theme }) => ({
@@ -64,15 +82,12 @@ const HeaderCell = styled(TableCell)(({ theme }) => ({
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme, isActive }) => ({
-  backgroundColor: isActive ? 'rgba(7, 91, 94, 0.05)' : 'white',
-  '&:nth-of-type(odd)': {
-    backgroundColor: isActive ? 'rgba(7, 91, 94, 0.08)' : 'rgba(7, 91, 94, 0.02)',
-  },
+  backgroundColor: isActive ? theme.palette.action.selected : theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius,
+  transition: 'transform .15s ease, box-shadow .15s ease',
   '&:hover': {
-    backgroundColor: 'rgba(16, 16, 51, 0.12)',
-    transform: 'translateY(-1px)',
-    boxShadow: '0 4px 8px rgba(21, 18, 59, 0.1)',
-    transition: 'all 0.2s ease-in-out'
+    transform: 'translateY(-2px)',
+    boxShadow: theme.shadows[4]
   }
 }));
 
@@ -129,7 +144,7 @@ const UserManagementAdmin = () => {
     customer.mobileNumber?.includes(searchTerm)
   );
 
-  const handleViewDetails = (customer) => {
+  const handleViewCustomer = (customer) => {
     setDetailsDialog({ open: true, customer });
   };
 
@@ -328,7 +343,7 @@ const UserManagementAdmin = () => {
                               {customer.fullName || 'N/A'}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Customer ID: {customer._id.slice(-6)}
+                              Customer ID: {customer.customerId || customer._id.slice(-6)}
                             </Typography>
                           </Box>
                         </Box>
@@ -349,7 +364,9 @@ const UserManagementAdmin = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <LocationIcon sx={{ fontSize: 16, mr: 1, color: '#003047' }} />
                           <Box>
-                            <Typography variant="body2">{customer.city || 'N/A'}</Typography>
+                            <Typography variant="body2">
+                              {customer.currentAddress ? customer.currentAddress.split(',')[0] : 'N/A'}
+                            </Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                               {customer.currentAddress?.substring(0, 30)}{customer.currentAddress?.length > 30 ? '...' : ''}
                             </Typography>
@@ -369,7 +386,7 @@ const UserManagementAdmin = () => {
                         <IconButton 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleViewDetails(customer);
+                            handleViewCustomer(customer);
                           }}
                           sx={{ color: '#003047' }}
                         >
@@ -384,57 +401,188 @@ const UserManagementAdmin = () => {
           </CardContent>
         </Card>
 
-        {/* Customer Details Dialog */}
+        {/* Enhanced Customer Details Dialog - Read Only */}
         <Dialog 
           open={detailsDialog.open} 
           onClose={() => setDetailsDialog({ open: false, customer: null })}
           maxWidth="md"
           fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 4,
+              boxShadow: '0 20px 60px rgba(0,48,71,0.2)',
+              overflow: 'hidden'
+            }
+          }}
         >
-          <DialogTitle sx={{ bgcolor: '#003047', color: 'white', fontWeight: 700 }}>
-            Customer Details
+          <DialogTitle 
+            sx={{ 
+              background: 'linear-gradient(135deg, #003047 0%, #219ebc 100%)',
+              color: 'white', 
+              fontWeight: 700,
+              p: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+              <PersonIcon sx={{ fontSize: 28 }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                Customer Details
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Complete customer information
+              </Typography>
+            </Box>
           </DialogTitle>
-          <DialogContent sx={{ p: 3 }}>
+          
+          <DialogContent sx={{ p: 0 }}>
             {detailsDialog.customer && (
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Full Name</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {detailsDialog.customer.fullName}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Email Address</Typography>
-                  <Typography variant="body1">{detailsDialog.customer.emailAddress}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Mobile Number</Typography>
-                  <Typography variant="body1">{detailsDialog.customer.mobileNumber || 'Not provided'}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">City</Typography>
-                  <Typography variant="body1">{detailsDialog.customer.city || 'Not provided'}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">Current Address</Typography>
-                  <Typography variant="body1">{detailsDialog.customer.currentAddress || 'Not provided'}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Registration Date</Typography>
-                  <Typography variant="body1">{formatDate(detailsDialog.customer.createdAt)}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Account Status</Typography>
-                  {getStatusChip(detailsDialog.customer.isActive !== false)}
-                </Grid>
-              </Grid>
+              <Box>
+                {/* Customer Header Section */}
+                <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderBottom: '1px solid #e9ecef' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Avatar 
+                      sx={{ 
+                        bgcolor: '#003047',
+                        width: 80,
+                        height: 80,
+                        fontSize: '2rem',
+                        boxShadow: '0 8px 24px rgba(0,48,71,0.3)'
+                      }}
+                    >
+                      {detailsDialog.customer.fullName?.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#003047', mb: 1 }}>
+                        {detailsDialog.customer.fullName}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                        <Chip 
+                          label={`ID: ${detailsDialog.customer.customerId || detailsDialog.customer._id.slice(-6)}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ fontWeight: 600 }}
+                        />
+                        {getStatusChip(detailsDialog.customer.isActive !== false)}
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Member since {formatDate(detailsDialog.customer.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Details Section */}
+                <Box sx={{ p: 4 }}>
+                  <Grid container spacing={4}>
+                    {/* Contact Information */}
+                    <Grid item xs={12}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: '#003047', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <EmailIcon sx={{ color: '#219ebc' }} />
+                        Contact Information
+                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} sm={6}>
+                          <Card sx={{ p: 3, borderRadius: 3, bgcolor: '#f8f9fa', border: '1px solid #e9ecef' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <EmailIcon sx={{ color: '#003047', fontSize: 20 }} />
+                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                Email Address
+                              </Typography>
+                            </Box>
+                            <Typography variant="body1" sx={{ fontWeight: 500, wordBreak: 'break-word' }}>
+                              {detailsDialog.customer.emailAddress}
+                            </Typography>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Card sx={{ p: 3, borderRadius: 3, bgcolor: '#f8f9fa', border: '1px solid #e9ecef' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <PhoneIcon sx={{ color: '#003047', fontSize: 20 }} />
+                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                Mobile Number
+                              </Typography>
+                            </Box>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {detailsDialog.customer.mobileNumber || 'Not provided'}
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+
+                    {/* Personal Information */}
+                    <Grid item xs={12}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: '#003047', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PersonIcon sx={{ color: '#219ebc' }} />
+                        Personal Information
+                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} sm={6}>
+                          <Card sx={{ p: 3, borderRadius: 3, bgcolor: '#f8f9fa', border: '1px solid #e9ecef' }}>
+                            <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
+                              National Identity Card (NIC)
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {detailsDialog.customer.nicNumber || 'Not provided'}
+                            </Typography>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Card sx={{ p: 3, borderRadius: 3, bgcolor: '#f8f9fa', border: '1px solid #e9ecef' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                              <DateIcon sx={{ color: '#003047', fontSize: 20 }} />
+                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                Registration Date
+                              </Typography>
+                            </Box>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {formatDate(detailsDialog.customer.createdAt)}
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+
+                    {/* Address Information */}
+                    <Grid item xs={12}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: '#003047', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationIcon sx={{ color: '#219ebc' }} />
+                        Address Information
+                      </Typography>
+                      <Card sx={{ p: 3, borderRadius: 3, bgcolor: '#f8f9fa', border: '1px solid #e9ecef' }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
+                          Current Address
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.6 }}>
+                          {detailsDialog.customer.currentAddress || 'Not provided'}
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Box>
             )}
           </DialogContent>
-          <DialogActions sx={{ p: 3, bgcolor: '#f5f5f5' }}>
+          
+          <DialogActions sx={{ p: 3, bgcolor: '#f8f9fa', borderTop: '1px solid #e9ecef' }}>
             <Button 
               onClick={() => setDetailsDialog({ open: false, customer: null })}
               variant="contained"
-              sx={{ bgcolor: '#003047', '&:hover': { bgcolor: '#003047' } }}
+              size="large"
+              sx={{ 
+                bgcolor: '#003047', 
+                '&:hover': { bgcolor: '#002639' },
+                borderRadius: 3,
+                px: 4,
+                py: 1.5,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(0,48,71,0.3)'
+              }}
             >
               Close
             </Button>

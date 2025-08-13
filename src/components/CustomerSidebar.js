@@ -8,12 +8,13 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Divider
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
-  Search as SearchIcon,
-  BookOnline as BookIcon,
   Event as AppointmentsIcon,
   Person as ProfileIcon,
   Favorite as FavoritesIcon,
@@ -24,6 +25,7 @@ import {
   Chat as ChatIcon,
   NotificationImportant as RemindersIcon
 } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const CustomerSidebar = ({ open, onClose, user }) => {
@@ -34,49 +36,25 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       text: 'Dashboard',
       icon: <DashboardIcon />,
       path: '/customer-dashboard',
-      description: 'Your overview'
+      description: 'Overview: Services available & completed appointments'
     },
     {
-      text: 'Browse Services',
-      icon: <SearchIcon />,
-      path: '/customer/browse-services',
-      description: 'Search and filter available services'
-    },
-    {
-      text: 'My Appointments',
+      text: 'Bookings',
       icon: <AppointmentsIcon />,
       path: '/customer/appointments',
-      description: 'View, cancel, or reschedule bookings'
+      description: 'Manage appointments and reschedules'
     },
     {
-      text: 'Reschedule Tokens',
-      icon: <TokenIcon />,
-      path: '/customer/reschedule-tokens',
-      description: 'Track reusable services after cancellation'
-    },
-    {
-      text: 'Chat',
-      icon: <ChatIcon />,
-      path: '/customer/chat',
-      description: 'Communicate with booked providers'
-    },
-    {
-      text: 'Reminders',
-      icon: <RemindersIcon />,
-      path: '/customer/reminders',
-      description: 'View smart reminders and upcoming alerts'
-    },
-    {
-      text: 'History & Reviews',
+      text: 'History',
       icon: <HistoryIcon />,
       path: '/customer/history',
-      description: 'See past services and submit ratings'
+      description: 'View past appointments'
     },
     {
       text: 'Profile',
       icon: <ProfileIcon />,
       path: '/customer/profile',
-      description: 'Update personal details and preferences'
+      description: 'Manage details, change password, delete account'
     }
   ];
 
@@ -110,49 +88,41 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       </Box>
 
       <List sx={{ pt: 0 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              onClick={() => handleNavigation(item.path)}
-              selected={location.pathname === item.path}
-              sx={{
-                py: 1.5,
-                '&.Mui-selected': {
-                  bgcolor: '#CCF0F2',
-                  '&:hover': {
-                    bgcolor: '#B8E6E9'
-                  }
-                },
-                '&:hover': {
-                  bgcolor: '#F0FAFB'
-                }
-              }}
-            >
-              <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text}
-                secondary={item.description}
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-                    color: '#003047',
-                    fontSize: '0.95rem'
-                  },
-                  '& .MuiListItemText-secondary': {
-                    color: '#003047',
-                    fontSize: '0.75rem'
-                  }
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+        {/* Dashboard */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleNavigation('/customer-dashboard')} selected={location.pathname === '/customer-dashboard'}>
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><DashboardIcon/></ListItemIcon>
+            <ListItemText primary="Dashboard" secondary="Overview: Services available & completed appointments" />
+          </ListItemButton>
+        </ListItem>
 
-      <Divider sx={{ mx: 2, borderColor: '#003047' }} />
+        {/* collapsible My Activities */}
+        <Accordion disableGutters elevation={0} sx={{ '& .MuiAccordionSummary-root': { px: 2, py: 0 } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#F0FAFB' }}>
+            <Typography sx={{ color: '#003047', fontWeight: 'bold' }}>My Activities</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
+            {menuItems.filter(i => ['Bookings','History'].includes(i.text)).map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton onClick={() => handleNavigation(item.path)} selected={location.pathname === item.path}>
+                  <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} secondary={item.description} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Profile */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleNavigation('/customer/profile')} selected={location.pathname === '/customer/profile'}>
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><ProfileIcon/></ListItemIcon>
+            <ListItemText primary="Profile" secondary="Manage details, change password, delete account" />
+          </ListItemButton>
+        </ListItem>
+      </List>
       
+      <Divider sx={{ mx: 2, borderColor: '#003047' }} />
       <Box sx={{ p: 2, mt: 'auto' }}>
         <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Customer Portal

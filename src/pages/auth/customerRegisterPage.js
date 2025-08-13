@@ -39,6 +39,7 @@ const CustomerRegister = () => {
     currentAddress: '',
     emailAddress: '',
     mobileNumber: '',
+    nicNumber: '',                // added NIC state
     newPassword: '',
     confirmPassword: '',
     agreeToTerms: false 
@@ -93,6 +94,10 @@ const CustomerRegister = () => {
       errors.mobileNumber = mobileErrors[0];
     }
     
+    // NIC validation
+    const nicErrors = validateNIC(formData.nicNumber);
+    if (nicErrors.length > 0) errors.nicNumber = nicErrors[0];
+
     // Password validation
     const passwordErrors = validatePassword(formData.newPassword);
     if (passwordErrors.length > 0) errors.newPassword = passwordErrors[0];
@@ -129,6 +134,7 @@ const CustomerRegister = () => {
         currentAddress: formData.currentAddress,
         emailAddress: formData.emailAddress,
         mobileNumber: formData.mobileNumber,
+        nicNumber: formData.nicNumber,  // include NIC in payload
         password: formData.newPassword
       };
 
@@ -270,6 +276,21 @@ const CustomerRegister = () => {
               sx={{ mb: 2 }}
               error={!!validationErrors.mobileNumber}
               helperText={validationErrors.mobileNumber || 'e.g., 0771234567 or +94771234567'}
+            />
+              <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="nicNumber"
+              label="NIC Number"
+              name="nicNumber"
+              placeholder="Enter your NIC number"
+              value={formData.nicNumber}
+              onChange={handleChange}
+              variant="outlined"
+              sx={{ mb: 2 }}
+              error={!!validationErrors.nicNumber}
+              helperText={validationErrors.nicNumber || 'e.g., 123456789V or 199812345678'}
             />
               <TextField
               margin="normal"
