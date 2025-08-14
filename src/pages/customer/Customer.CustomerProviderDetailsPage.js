@@ -60,9 +60,11 @@ const CustomerProviderDetailsPage = () => {
     }
   };
 
-  const handleBookNow = () => {
-    navigate(`/customer/book-service/${providerId}`);
+  const openBooking = (serviceId) => {
+    navigate(`/customer/book-service/${serviceId}`);
   };
+
+  const handleBookNow = () => openBooking(providerId);
 
   const handleGoBack = () => {
     navigate('/customer/browse-services');

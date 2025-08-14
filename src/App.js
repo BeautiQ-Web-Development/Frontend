@@ -26,7 +26,7 @@ import LandingPage from './pages/landingPage';
 import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
 import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
-
+import CustomerBookServicePage from './pages/customer/Customer.CustomerBookServicePage';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -140,6 +140,10 @@ function App() {
                 <AdminNotifications />
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path="/customer/book-service/:serviceId" 
+            element={<CustomerBookServicePage />} 
           />
         </Routes>
     </CleanBackground>

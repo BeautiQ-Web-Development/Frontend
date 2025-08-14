@@ -24,7 +24,14 @@ import {
   Badge,
   Fade,
   Slide,
-  Zoom
+  Zoom,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Slider
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -41,7 +48,8 @@ import {
   Bookmark as BookmarkIcon,
   Share as ShareIcon,
   CalendarToday as CalendarIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { getApprovedProviders } from '../../services/auth';
 import { fetchNotifications } from '../../services/notification';
@@ -564,6 +572,17 @@ const CustomerDashboard = () => {
   const [servicesLoading, setServicesLoading] = useState(true);
   const [servicesError, setServicesError] = useState('');
 
+  // filter option arrays
+  const serviceTypes      = ['Hair Cut','Hair Style','Face Makeup','Nail Art','Saree Draping','Eye Makeup'];
+  const experienceLevels  = ['beginner','intermediate','experienced','expert'];
+  const categories        = ['Kids','Women','Men','Unisex'];
+
+  // filter state
+  const [priceRange,    setPriceRange]    = useState([0,10000]);
+  const [typeSelection, setTypeSelection] = useState([]);
+  const [expSelection,  setExpSelection]  = useState([]);
+  const [catSelection,  setCatSelection]  = useState([]);
+
   useEffect(() => {
     fetchServiceProviders();
     loadNotifications();
@@ -650,6 +669,16 @@ const CustomerDashboard = () => {
     }
     return `${mins}m`;
   };
+
+  // apply filters before render
+  const filteredServices = services.filter(s => {
+    const price = s.pricing?.basePrice ?? 0;
+    if (price < priceRange[0] || price > priceRange[1]) return false;
+    if (typeSelection.length && !typeSelection.includes(s.type)) return false;
+    if (expSelection.length  && !expSelection.includes(s.experienceLevel)) return false;
+    if (catSelection.length  && !catSelection.includes(s.category)) return false;
+    return true;
+  });
 
   if (providersLoading) {
     return (
@@ -760,132 +789,223 @@ const CustomerDashboard = () => {
                 <CircularProgress size={60} sx={{ color: '#00003f' }} />
               </Box>
             ) : (
-              <Grid container spacing={3}>
-                {services.length === 0 ? (
-                  <Grid item xs={12}>
-                    <Paper 
-                      sx={{ 
-                        p: 6, 
-                        textAlign: 'center',
-                        backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                        borderRadius: 4
-                      }}
-                    >
-                      <Typography variant="h5" sx={{ color: '#00003f', fontWeight: 600, mb: 2 }}>
-                        🔍 No Services Available
-                      </Typography>
-                      <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                        We're working hard to bring you amazing beauty services. Please check back later!
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                ) : (
-                  services.map((svc, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={svc._id}>
-                      <Zoom in timeout={600 + index * 100}>
-                        <ServiceCard>
-                          <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                              <Typography variant="h5" sx={{ 
-                                color: '#2d3748', 
-                                fontWeight: 700,
-                                lineHeight: 1.2
-                              }}>
-                                {svc.name}
-                              </Typography>
-                              <Tooltip title="Save to favorites">
-                                <IconButton size="small" sx={{ color: '#cbd5e0' }}>
-                                  <BookmarkIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
+              <>
+                {/* Filters Panel */}
+                <Accordion sx={{ mb: 3 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Filters
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {/* Price Range */}
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2">Price Range (LKR)</Typography>
+                      <Slider
+                        value={priceRange}
+                        onChange={(e,val)=>setPriceRange(val)}
+                        min={0}
+                        max={10000}
+                        step={100}
+                        valueLabelDisplay="auto"
+                      />
+                    </Box>
+                    {/* Experience Level */}
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2">Experience Level</Typography>
+                      <FormGroup row>
+                        {experienceLevels.map(level=>(
+                          <FormControlLabel
+                            key={level}
+                            control={
+                              <Checkbox
+                                checked={expSelection.includes(level)}
+                                onChange={()=>setExpSelection(prev=>
+                                  prev.includes(level)
+                                    ? prev.filter(x=>x!==level)
+                                    : [...prev, level]
+                                )}
+                              />
+                            }
+                            label={level.charAt(0).toUpperCase()+level.slice(1)}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Box>
+                    {/* Category */}
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2">Category</Typography>
+                      <FormGroup row>
+                        {categories.map(cat=>(
+                          <FormControlLabel
+                            key={cat}
+                            control={
+                              <Checkbox
+                                checked={catSelection.includes(cat)}
+                                onChange={()=>setCatSelection(prev=>
+                                  prev.includes(cat)
+                                    ? prev.filter(x=>x!==cat)
+                                    : [...prev, cat]
+                                )}
+                              />
+                            }
+                            label={cat}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Box>
+                    {/* Type of Service */}
+                    <Box>
+                      <Typography variant="subtitle2">Type of Service</Typography>
+                      <FormGroup row>
+                        {serviceTypes.map(type=>(
+                          <FormControlLabel
+                            key={type}
+                            control={
+                              <Checkbox
+                                checked={typeSelection.includes(type)}
+                                onChange={()=>setTypeSelection(prev=>
+                                  prev.includes(type)
+                                    ? prev.filter(x=>x!==type)
+                                    : [...prev, type]
+                                )}
+                              />
+                            }
+                            label={type}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
 
-                            <Chip 
-                              label={svc.type}
-                              size="small"
-                              sx={{ 
-                                mb: 2,
-                                backgroundColor: 'rgba(79, 172, 254, 0.1)',
-                                color: '#4facfe',
-                                fontWeight: 600
-                              }}
-                            />
-
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <TimeIcon sx={{ mr: 1, color: '#a0aec0', fontSize: 18 }} />
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                {formatDuration(svc.duration)}
-                              </Typography>
-                            </Box>
-
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                              <LocationIcon sx={{ mr: 1, color: '#a0aec0', fontSize: 18 }} />
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                {svc.serviceProvider?.businessAddress?.substring(0, 30) || 
-                                 svc.serviceProvider?.currentAddress?.substring(0, 30) || 
-                                 svc.serviceProvider?.city || 'N/A'}
-                                {((svc.serviceProvider?.businessAddress?.length > 30) || 
-                                  (svc.serviceProvider?.currentAddress?.length > 30)) && '...'}
-                              </Typography>
-                            </Box>
-
-                            <Box sx={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center',
-                              p: 2,
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                              borderRadius: 2,
-                              mb: 2
-                            }}>
-                              <Typography variant="h5" sx={{ 
-                                color: '#00003f', 
-                                fontWeight: 700
-                              }}>
-                                LKR {svc.basePrice?.toFixed(2) || svc.pricing?.basePrice?.toFixed(2) || 'N/A'}
-                              </Typography>
-                              <Rating value={4.5} size="small" readOnly />
-                            </Box>
-                          </CardContent>
-
-                          <CardActions 
-                            sx={{ 
-                              p: 3, 
-                              pt: 0,
-                              '&.service-actions': {
-                                opacity: 0.8,
-                                transform: 'translateY(4px)',
-                                transition: 'all 0.3s ease'
-                              }
-                            }}
-                            className="service-actions"
-                          >
-                            <GradientButton
-                              variant="secondary"
-                              size="small"
-                              fullWidth
-                              onClick={() => handleViewServiceDetails(svc)}
-                              startIcon={<InfoIcon />}
-                              sx={{ mr: 1 }}
-                            >
-                              More Details
-                            </GradientButton>
-                            <GradientButton
-                              variant="primary"
-                              size="small"
-                              fullWidth
-                              onClick={() => navigate(`/customer/book-service/${svc._id}`)}
-                              startIcon={<CalendarIcon />}
-                            >
-                              Book Now
-                            </GradientButton>
-                          </CardActions>
-                        </ServiceCard>
-                      </Zoom>
+                <Grid container spacing={3}>
+                  {filteredServices.length === 0 ? (
+                    <Grid item xs={12}>
+                      <Paper 
+                        sx={{ 
+                          p: 6, 
+                          textAlign: 'center',
+                          backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                          borderRadius: 4
+                        }}
+                      >
+                        <Typography variant="h5" sx={{ color: '#00003f', fontWeight: 600, mb: 2 }}>
+                          🔍 No Services Available
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                          We're working hard to bring you amazing beauty services. Please check back later!
+                        </Typography>
+                      </Paper>
                     </Grid>
-                  ))
-                )}
-              </Grid>
+                  ) : (
+                    filteredServices.map((svc, index) => (
+                      <Grid item xs={12} sm={6} md={4} key={svc._id}>
+                        <Zoom in timeout={600 + index * 100}>
+                          <ServiceCard>
+                            <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                <Typography variant="h5" sx={{ 
+                                  color: '#2d3748', 
+                                  fontWeight: 700,
+                                  lineHeight: 1.2
+                                }}>
+                                  {svc.name}
+                                </Typography>
+                                <Tooltip title="Save to favorites">
+                                  <IconButton size="small" sx={{ color: '#cbd5e0' }}>
+                                    <BookmarkIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+
+                              <Chip 
+                                label={svc.type}
+                                size="small"
+                                sx={{ 
+                                  mb: 2,
+                                  backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                                  color: '#4facfe',
+                                  fontWeight: 600
+                                }}
+                              />
+
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <TimeIcon sx={{ mr: 1, color: '#a0aec0', fontSize: 18 }} />
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  {formatDuration(svc.duration)}
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <LocationIcon sx={{ mr: 1, color: '#a0aec0', fontSize: 18 }} />
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  {svc.serviceProvider?.businessAddress?.substring(0, 30) || 
+                                   svc.serviceProvider?.currentAddress?.substring(0, 30) || 
+                                   svc.serviceProvider?.city || 'N/A'}
+                                  {((svc.serviceProvider?.businessAddress?.length > 30) || 
+                                    (svc.serviceProvider?.currentAddress?.length > 30)) && '...'}
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                p: 2,
+                                backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                                borderRadius: 2,
+                                mb: 2
+                              }}>
+                                <Typography variant="h5" sx={{ 
+                                  color: '#00003f', 
+                                  fontWeight: 700
+                                }}>
+                                  LKR {svc.basePrice?.toFixed(2) || svc.pricing?.basePrice?.toFixed(2) || 'N/A'}
+                                </Typography>
+                                <Rating value={4.5} size="small" readOnly />
+                              </Box>
+                            </CardContent>
+
+                            <CardActions 
+                              sx={{ 
+                                p: 3, 
+                                pt: 0,
+                                '&.service-actions': {
+                                  opacity: 0.8,
+                                  transform: 'translateY(4px)',
+                                  transition: 'all 0.3s ease'
+                                }
+                              }}
+                              className="service-actions"
+                            >
+                              <GradientButton
+                                variant="secondary"
+                                size="small"
+                                fullWidth
+                                onClick={() => handleViewServiceDetails(svc)}
+                                startIcon={<InfoIcon />}
+                                sx={{ mr: 1 }}
+                              >
+                                More Details
+                              </GradientButton>
+                              <GradientButton
+                                variant="primary"
+                                size="small"
+                                fullWidth
+                                onClick={() => navigate(`/customer/book-service/${svc._id}`)}
+                                startIcon={<CalendarIcon />}
+                              >
+                                Book Now
+                              </GradientButton>
+                            </CardActions>
+                          </ServiceCard>
+                        </Zoom>
+                      </Grid>
+                    ))
+                  )}
+                </Grid>
+              </>
             )}
           </DiscoveryCard>
         </Fade>
