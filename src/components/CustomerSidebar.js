@@ -74,7 +74,9 @@ const CustomerSidebar = ({ open, onClose, user }) => {
           width: 300,
           bgcolor: '#F8F8FF',
           borderRight: '1px solid #003047',
-          zIndex: 1300
+          zIndex: 1400,
+          top: 0,
+          height: 'calc(100vh - 0px)'
         }
       }}
     >
