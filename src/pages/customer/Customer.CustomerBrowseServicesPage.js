@@ -13,8 +13,18 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
-  Alert
+  Alert,
+  Accordion, AccordionSummary, AccordionDetails,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Slider,
+  FormGroup,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Search as SearchIcon,
   LocationOn as LocationIcon,
@@ -24,6 +34,18 @@ import { getApprovedServiceProviders } from '../../services/auth';
 import { useNavigate } from 'react-router-dom';
 
 const CustomerBrowseServicesPage = () => {
+  // filter options
+  const serviceTypes = ['Hair Cut','Hair Style','Face Makeup','Nail Art','Saree Draping','Eye Makeup'];
+  const experienceLevels = ['beginner','intermediate','experienced','expert'];
+  const categories = ['Women','Men','Kids','Unisex'];
+  // filter state
+  const [typeFilter, setTypeFilter] = useState('');
+  const [expFilter, setExpFilter] = useState('');
+  const [catFilter, setCatFilter] = useState('');
+  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [expSelection, setExpSelection] = useState([]);
+  const [catSelection, setCatSelection] = useState([]);
+  const [typeSelection, setTypeSelection] = useState([]);
   const [serviceProviders, setServiceProviders] = useState([]);
   const [filteredProviders, setFilteredProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +59,7 @@ const CustomerBrowseServicesPage = () => {
 
   useEffect(() => {
     filterProviders();
-  }, [searchTerm, serviceProviders]);
+  }, [searchTerm, serviceProviders, typeFilter, expFilter, catFilter, priceRange, expSelection, catSelection, typeSelection]);
 
   const fetchServiceProviders = async () => {
     try {
@@ -66,22 +88,47 @@ const CustomerBrowseServicesPage = () => {
   };
 
   const filterProviders = () => {
-    if (!searchTerm) {
-      setFilteredProviders(serviceProviders);
-    } else {
-      const filtered = serviceProviders.filter(provider =>
+    let list = serviceProviders;
+    // search term
+    if (searchTerm) {
+      list = list.filter(provider =>
         provider.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         provider.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        provider.specialties?.some(specialty => 
-          specialty.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        provider.specialties?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-      setFilteredProviders(filtered);
     }
+    if (typeFilter) {
+      list = list.filter(p => p.specialties?.includes(typeFilter));
+    }
+    if (expFilter) {
+      list = list.filter(p => p.experience?.level === expFilter);
+    }
+    if (catFilter) {
+      list = list.filter(p => p.category === catFilter);
+    }
+    // price
+    list = list.filter(p => {
+      const price = p.pricing?.basePrice ?? 0;
+      return price >= priceRange[0] && price <= priceRange[1];
+    });
+    // experience
+    if (expSelection.length) {
+      list = list.filter(p => expSelection.includes(p.experience?.level));
+    }
+    // category
+    if (catSelection.length) {
+      list = list.filter(p => catSelection.includes(p.category));
+    }
+    // type
+    if (typeSelection.length) {
+      list = list.filter(p => typeSelection.includes(p.type));
+    }
+    setFilteredProviders(list);
   };
 
-  const handleBookNow = (providerId) => {
-    navigate(`/customer/book-service/${providerId}`);
+  // NEW helper to open calendar view
+  const openBooking = (serviceId) => {
+    navigate(`/customer/book-service/${serviceId}`);
   };
 
   const handleViewDetails = (providerId) => {
@@ -102,30 +149,108 @@ const CustomerBrowseServicesPage = () => {
         Browse Services
       </Typography>
       
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
           placeholder="Search by business name, provider name, or service type..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#003047' }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              '&:hover fieldset': {
-                borderColor: '#003047',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#003047',
-              },
-            },
-          }}
+          InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{color:'#003047'}}/></InputAdornment>) }}
+          sx={{ mb: 2 }}
         />
+
+        {/* Filters Panel */}
+        <Accordion defaultExpanded sx={{ mt: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Filters</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            {/* Price Range */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Price Range (LKR)</Typography>
+              <Slider
+                value={priceRange}
+                onChange={(e, val) => setPriceRange(val)}
+                valueLabelDisplay="auto"
+                min={0}
+                max={10000}
+                step={100}
+              />
+            </Box>
+            {/* Experience Level */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Experience Level</Typography>
+              <FormGroup row>
+                {experienceLevels.map(level => (
+                  <FormControlLabel
+                    key={level}
+                    control={
+                      <Checkbox
+                        checked={expSelection.includes(level)}
+                        onChange={() => {
+                          setExpSelection(prev =>
+                            prev.includes(level)
+                              ? prev.filter(l => l !== level)
+                              : [...prev, level]
+                          );
+                        }}
+                      />
+                    }
+                    label={level.charAt(0).toUpperCase() + level.slice(1)}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+            {/* Category */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Category</Typography>
+              <FormGroup row>
+                {categories.map(cat => (
+                  <FormControlLabel
+                    key={cat}
+                    control={
+                      <Checkbox
+                        checked={catSelection.includes(cat)}
+                        onChange={() => {
+                          setCatSelection(prev =>
+                            prev.includes(cat)
+                              ? prev.filter(c => c !== cat)
+                              : [...prev, cat]
+                          );
+                        }}
+                      />
+                    }
+                    label={cat}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+            {/* Type of Service */}
+            <Box>
+              <Typography variant="subtitle2">Type of Service</Typography>
+              <FormGroup row>
+                {serviceTypes.map(type => (
+                  <FormControlLabel
+                    key={type}
+                    control={
+                      <Checkbox
+                        checked={typeSelection.includes(type)}
+                        onChange={() => {
+                          setTypeSelection(prev =>
+                            prev.includes(type)
+                              ? prev.filter(t => t !== type)
+                              : [...prev, type]
+                          );
+                        }}
+                      />
+                    }
+                    label={type}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
       </Box>
 
       {error && (
@@ -225,7 +350,7 @@ const CustomerBrowseServicesPage = () => {
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => handleBookNow(provider._id)}
+                      onClick={() => openBooking(provider._id)}
                       sx={{
                         backgroundColor: '#003047',
                         '&:hover': {
