@@ -144,6 +144,8 @@ const ServiceManagementAdmin = () => {
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const [providerSubTab, setProviderSubTab] = useState(0);
+  const [serviceSubTab, setServiceSubTab] = useState(0);
   const [serviceProviders, setServiceProviders] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -544,8 +546,8 @@ const ServiceManagementAdmin = () => {
     );
   };
 
-  const renderServiceProvidersTable = () => {
-    const filteredProviders = filterItems(serviceProviders, 'businessName');
+  const renderServiceProvidersTable = (items = serviceProviders) => {
+    const filteredProviders = filterItems(items, 'businessName');
     
     return (
       <StyledTableContainer>
@@ -653,11 +655,11 @@ const ServiceManagementAdmin = () => {
     );
   };
 
-  const renderServicesTable = () => {
-    const filteredServices = services ? filterItems(services.filter(service => service != null), 'name') : [];
+  const renderServicesTable = (items = services) => {
+  const filteredServices = items ? filterItems(items.filter(service => service != null), 'name') : [];
     
     return (
-      <StyledTableContainer>
+        <StyledTableContainer>
         <Table>
           <TableHead>
             <TableRow>
@@ -697,13 +699,21 @@ const ServiceManagementAdmin = () => {
                 const isProcessing = processingActions.has(`${service._id}_approve`) || 
                                    processingActions.has(`${service._id}_reject`);
                 
+                // Determine highlight color for update/delete requests
+                const isUpdateReq = service.pendingChanges?.actionType === 'update';
+                const isDeleteReq = service.pendingChanges?.actionType === 'delete';
+                const highlightBg = isUpdateReq
+                  ? 'rgba(255, 193, 7, 0.15)'
+                  : isDeleteReq
+                    ? 'rgba(244, 67, 54, 0.15)'
+                    : undefined;
                 return (
                   <StyledTableRow 
                     key={service._id}
                     status={service.status}
                     selected={selectedItemId === service._id}
                     onClick={() => setSelectedItemId(service._id)}
-                    sx={{ cursor: 'pointer' }}
+                    sx={{ cursor: 'pointer', backgroundColor: highlightBg }}
                   >
                     <TableCell>
                       <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#8B4B9C' }}>
@@ -932,11 +942,14 @@ const ServiceManagementAdmin = () => {
 
         {/* Tabs */}
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
-          <Tabs 
-            value={currentTab} 
-            onChange={(e, newValue) => setCurrentTab(newValue)}
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
-          >
+          <Tabs
+              value={currentTab}
+              onChange={(e, newValue) => setCurrentTab(newValue)}
+              variant="fullWidth"
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
             <Tab 
               icon={<StoreIcon />} 
               label={`Service Providers (${serviceProviders.length})`} 
@@ -950,8 +963,44 @@ const ServiceManagementAdmin = () => {
           </Tabs>
           
           <CardContent sx={{ p: 0 }}>
-            {currentTab === 0 && renderServiceProvidersTable()}
-            {currentTab === 1 && renderServicesTable()}
+            {currentTab === 0 && (
+              <>
+                <Tabs
+                  value={providerSubTab}
+                  onChange={(e, newValue) => setProviderSubTab(newValue)}
+                  variant="fullWidth"
+                  textColor="primary"
+                  indicatorColor="primary"
+                  sx={{ borderBottom: 1, borderColor: 'divider' }}
+                >
+                  <Tab label={`All Details (${serviceProviders.length})`} />
+                  <Tab label={`Update Requests (${serviceProviders.filter(p => p.approvalStatus === 'pending').length})`} />
+                  <Tab label={`Delete Requests (${serviceProviders.filter(p => p.isActive === false).length})`} />
+                </Tabs>
+                {providerSubTab === 0 && renderServiceProvidersTable()}
+                {providerSubTab === 1 && renderServiceProvidersTable(serviceProviders.filter(p => p.approvalStatus === 'pending'))}
+                {providerSubTab === 2 && renderServiceProvidersTable(serviceProviders.filter(p => p.isActive === false))}
+              </>
+            )}
+            {currentTab === 1 && (
+              <>
+                <Tabs
+                  value={serviceSubTab}
+                  onChange={(e, newValue) => setServiceSubTab(newValue)}
+                  variant="fullWidth"
+                  textColor="primary"
+                  indicatorColor="primary"
+                  sx={{ borderBottom: 1, borderColor: 'divider' }}
+                >
+                  <Tab label={`All Details (${services.length})`} />
+                  <Tab label={`Update Requests (${services.filter(s => s.pendingChanges?.actionType === 'update').length})`} />
+                  <Tab label={`Delete Requests (${services.filter(s => s.pendingChanges?.actionType === 'delete').length})`} />
+                </Tabs>
+                {serviceSubTab === 0 && renderServicesTable()}
+                {serviceSubTab === 1 && renderServicesTable(services.filter(s => s.pendingChanges?.actionType === 'update'))}
+                {serviceSubTab === 2 && renderServicesTable(services.filter(s => s.pendingChanges?.actionType === 'delete'))}
+              </>
+            )}
           </CardContent>
         </Card>
 
