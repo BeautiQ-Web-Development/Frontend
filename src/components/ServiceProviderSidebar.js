@@ -19,7 +19,8 @@ import {
   Person as ProfileIcon,
   Logout as LogoutIcon,
   ExitToApp as ResignIcon,
-  CardGiftcard as PackageIcon
+  CardGiftcard as PackageIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -53,29 +54,35 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
   //   path: '/service-provider/packages',
   //   description: 'View and manage your packages'
   // },
+    // {
+    //   text: 'Chat',
+    //   icon: <ChatIcon />,
+    //   path: '/service-provider/chat',
+    //   description: 'Real-time messages'
+    // },
+    // {
+    //   text: 'Performance',
+    //   icon: <PerformanceIcon />,
+    //   path: '/service-provider/performance',
+    //   description: 'Insights & stats'
+    // },
+    // {
+    //   text: 'Rent & Income',
+    //   icon: <RentIcon />,
+    //   path: '/service-provider/rent-income',
+    //   description: 'Check income logs'
+    // },
+    // {
+    //   text: 'My Details',
+    //   icon: <ProfileIcon />,
+    //   path: '/service-provider/profile',
+    //   description: 'Personal & business info'
+    // },
     {
-      text: 'Chat',
-      icon: <ChatIcon />,
-      path: '/service-provider/chat',
-      description: 'Real-time messages'
-    },
-    {
-      text: 'Performance',
-      icon: <PerformanceIcon />,
-      path: '/service-provider/performance',
-      description: 'Insights & stats'
-    },
-    {
-      text: 'Rent & Income',
-      icon: <RentIcon />,
-      path: '/service-provider/rent-income',
-      description: 'Check income logs'
-    },
-    {
-      text: 'My Details',
-      icon: <ProfileIcon />,
-      path: '/service-provider/profile',
-      description: 'Personal & business info'
+      text: 'Profile Settings',
+      icon: <SettingsIcon />,
+      path: '/profile-settings',
+      description: 'Update your profile settings'
     }
   ];
 
@@ -98,12 +105,12 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
         '& .MuiDrawer-paper': {
           width: 300,
           bgcolor: '#F8F8FF',
-          borderRight: '1px solid #075B5E',
+          borderRight: '1px solid #003047',
           zIndex: 1300
         }
       }}
     >
-      <Box sx={{ p: 3, bgcolor: '#075B5E' }}>
+      <Box sx={{ p: 3, bgcolor: '#003047' }}>
         <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
           {user?.businessName || 'Service Provider'}
         </Typography>
@@ -131,7 +138,7 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
                 }
               }}
             >
-              <ListItemIcon sx={{ color: '#075B5E', minWidth: 40 }}>
+              <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>
                 {item.icon}
               </ListItemIcon>
               <ListItemText 
@@ -140,11 +147,11 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
                 sx={{ 
                   '& .MuiListItemText-primary': {
                     fontWeight: item.path && location.pathname === item.path ? 'bold' : 'normal',
-                    color: '#075B5E',
+                    color: '#003047',
                     fontSize: '0.95rem'
                   },
                   '& .MuiListItemText-secondary': {
-                    color: '#054548',
+                    color: '#003047',
                     fontSize: '0.75rem'
                   }
                 }}
@@ -154,10 +161,10 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
         ))}
       </List>
 
-      <Divider sx={{ mx: 2, borderColor: '#075B5E' }} />
+      <Divider sx={{ mx: 2, borderColor: '#003047' }} />
       
       {/* Resignation Button */}
-      <List>
+      {/* <List>
         <ListItem disablePadding>
           <ListItemButton
             onClick={onResignation}
@@ -187,10 +194,10 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
             />
           </ListItemButton>
         </ListItem>
-      </List>
+      </List> */}
 
       <Box sx={{ p: 2, mt: 'auto' }}>
-        <Typography variant="caption" sx={{ color: '#054548', display: 'block', textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Service Provider Portal
         </Typography>
       </Box>

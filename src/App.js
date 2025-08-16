@@ -10,8 +10,8 @@ import ServiceProviderLoginPage from './pages/auth/serviceProviderLoginPage';
 import ServiceProviderRegisterPage from './pages/auth/serviceProviderRegisterPage';
 import AdminLoginPage from './pages/auth/adminLoginPage';
 import AdminRegisterPage from './pages/auth/adminRegisterPage';
-import ForgotPasswordPage from './pages/auth/forgotPasswordPage';
-import ResetPasswordPage from './pages/auth/resetPasswordPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import AdminDashboardPage from './pages/dashboards/adminDashboardPage';
 import ServiceProviderDashboardPage from './pages/dashboards/serviceProviderDashboardPage';
 import CustomerDashboardPage from './pages/dashboards/customerDashboardPage';
@@ -27,6 +27,7 @@ import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
 import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
 import CustomerBookServicePage from './pages/customer/Customer.CustomerBookServicePage';
+import ProfileSettingsPage from './pages/profile/ProfileSettingsPage';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -145,6 +146,14 @@ function App() {
             path="/customer/book-service/:serviceId" 
             element={<CustomerBookServicePage />} 
           />
+          <Route path="/profile-settings" element={
+            <ProtectedRoute>
+              <ProfileSettingsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Routes>
     </CleanBackground>
   );

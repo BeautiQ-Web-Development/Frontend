@@ -321,12 +321,37 @@ export const requestPasswordReset = async (emailAddress) => {
   }
 };
 
+// export const resetPassword = async (resetToken, newPassword) => {
+//   try {
+//     const response = await api.post('/auth/reset-password', {
+//       resetToken,
+//       newPassword
+//     });
+    
+//     if (!response.data.success) {
+//       throw new Error(response.data.message || 'Failed to reset password');
+//     }
+    
+//     return response.data;
+//   } catch (error) {
+//     console.error('Reset password error:', error);
+//     throw error.response?.data || {
+//       message: 'Failed to reset password. Please try again.'
+//     };
+//   }
+// };
+
+// ✅ FIX 1: Update auth.js service (services/auth.js)
 export const resetPassword = async (resetToken, newPassword) => {
   try {
-    const response = await api.post('/auth/reset-password', {
-      resetToken,
-      newPassword
+    console.log('🔐 Attempting password reset with token:', resetToken?.substring(0, 10) + '...');
+    
+    // ✅ FIXED: Send token as URL parameter, password in body
+    const response = await api.post(`/auth/reset-password/${resetToken}`, {
+      password: newPassword  // ✅ Use 'password' field name to match backend
     });
+    
+    console.log('✅ Password reset response:', response.data);
     
     if (!response.data.success) {
       throw new Error(response.data.message || 'Failed to reset password');
@@ -334,19 +359,57 @@ export const resetPassword = async (resetToken, newPassword) => {
     
     return response.data;
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('❌ Reset password error:', error);
+    
+    // Enhanced error handling
+    if (error.response?.status === 400) {
+      throw new Error(error.response.data.message || 'Invalid or expired reset link');
+    } else if (error.response?.status === 403) {
+      throw new Error('Cannot reset password for deactivated account');
+    }
+    
     throw error.response?.data || {
       message: 'Failed to reset password. Please try again.'
     };
   }
 };
 
+
+
 export const getProfile = async () => {
   try {
     const response = await api.get('/auth/profile');
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: error.message };
+    console.error('Get profile error:', error);
+    throw error.response?.data || { message: 'Failed to fetch profile' };
+  }
+};
+
+// New functions for profile settings
+export const updateUserDetails = async (userData) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post('/auth/update-profile', userData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Update profile error:', error);
+    throw error.response?.data || { message: 'Failed to update profile details' };
+  }
+};
+
+export const requestAccountDeletion = async (reason) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post('/auth/request-account-deletion', { reason }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Account deletion request error:', error);
+    throw error.response?.data || { message: 'Failed to submit account deletion request' };
   }
 };
 

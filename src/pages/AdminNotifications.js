@@ -146,6 +146,13 @@ const AdminNotifications = () => {
           actionType === 'reject' ? { reason: actionReason || 'Application does not meet requirements' } : {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
+      } else if (selectedItem.itemType === 'customer_update' || selectedItem.itemType === 'customer_delete') {
+        const endpoint = actionType === 'approve' ? 'approve-customer-update' : 'reject-customer-update';
+        const url = `http://localhost:5000/api/auth/admin/${endpoint}/${selectedItem._id}`;
+        response = await axios.put(url,
+          actionType === 'reject' ? { rejectionReason: actionReason || 'Request did not meet requirements' } : {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
       }
 
       setSuccess(`${selectedItem.itemType} ${actionType}d successfully`);
