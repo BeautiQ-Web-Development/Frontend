@@ -23,44 +23,60 @@ import {
   Home as HomeIcon,
   Token as TokenIcon,
   Chat as ChatIcon,
-  NotificationImportant as RemindersIcon
+  NotificationImportant as RemindersIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const CustomerSidebar = ({ open, onClose, user }) => {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Enhanced menu items with better descriptions
   const menuItems = [
     {
       text: 'Dashboard',
-      icon: <DashboardIcon />,
       path: '/customer-dashboard',
-      description: 'Overview: Services available & completed appointments'
+      icon: <DashboardIcon />,
+      description: 'Overview of services & bookings'
+    },
+    {
+      text: 'Browse Services',
+      path: '/customer/browse-services',
+      icon: <SearchIcon />,
+      description: 'Find beauty services'
     },
     {
       text: 'Bookings',
+      path: '/customer/my-bookings',
       icon: <AppointmentsIcon />,
-      path: '/customer/appointments',
-      description: 'Manage appointments and reschedules'
+      description: 'Upcoming appointments'
     },
     {
       text: 'History',
+      path: '/customer/appointment-history',
       icon: <HistoryIcon />,
-      path: '/customer/history',
-      description: 'View past appointments'
+      description: 'Past appointments'
     },
     {
-      text: 'Profile',
-      icon: <ProfileIcon />,
-      path: '/customer/profile',
-      description: 'Manage details, change password, delete account'
+      text: 'Profile Settings',
+      path: '/profile-settings',
+      icon: <SettingsIcon />,
+      description: 'Manage your account'
     }
   ];
 
   const handleNavigation = (path) => {
     navigate(path);
-    if (onClose) onClose();
+    onClose();
+  };
+
+  // Get current page name for display
+  const getCurrentPageName = () => {
+    const currentItem = menuItems.find(item => location.pathname === item.path || 
+                                               location.pathname.startsWith(item.path + '/'));
+    return currentItem ? currentItem.text : 'BeautiQ';
   };
 
   return (
@@ -87,14 +103,48 @@ const CustomerSidebar = ({ open, onClose, user }) => {
         <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
           {user?.emailAddress}
         </Typography>
+        <Typography variant="body2" sx={{ 
+          color: 'white', 
+          mt: 1,
+          p: 1, 
+          bgcolor: 'rgba(255,255,255,0.1)',
+          borderRadius: 1,
+          fontWeight: 500
+        }}>
+          Current Page: {getCurrentPageName()}
+        </Typography>
       </Box>
 
       <List sx={{ pt: 0 }}>
         {/* Dashboard */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/customer-dashboard')} selected={location.pathname === '/customer-dashboard'}>
+          <ListItemButton 
+            onClick={() => handleNavigation('/customer-dashboard')} 
+            selected={location.pathname === '/customer-dashboard'}
+            sx={{
+              '&.Mui-selected': {
+                bgcolor: '#E6F7F8',
+                '&:hover': {
+                  bgcolor: '#E6F7F8',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: 4,
+                  bgcolor: '#003047',
+                }
+              }
+            }}
+          >
             <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><DashboardIcon/></ListItemIcon>
-            <ListItemText primary="Dashboard" secondary="Overview: Services available & completed appointments" />
+            <ListItemText 
+              primary="Dashboard" 
+              secondary="Overview: Services available & completed appointments" 
+              primaryTypographyProps={{ fontWeight: location.pathname === '/customer-dashboard' ? 700 : 400 }}
+            />
           </ListItemButton>
         </ListItem>
 
@@ -106,20 +156,106 @@ const CustomerSidebar = ({ open, onClose, user }) => {
           <AccordionDetails sx={{ p: 0 }}>
             {menuItems.filter(i => ['Bookings','History'].includes(i.text)).map((item) => (
               <ListItem key={item.text} disablePadding>
-                <ListItemButton onClick={() => handleNavigation(item.path)} selected={location.pathname === item.path}>
+                <ListItemButton 
+                  onClick={() => handleNavigation(item.path)} 
+                  selected={location.pathname === item.path || location.pathname.startsWith(item.path + '/')} 
+                  sx={{
+                    '&.Mui-selected': {
+                      bgcolor: '#E6F7F8',
+                      '&:hover': {
+                        bgcolor: '#E6F7F8',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        height: '100%',
+                        width: 4,
+                        bgcolor: '#003047',
+                      }
+                    }
+                  }}
+                >
                   <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} secondary={item.description} />
+                  <ListItemText 
+                    primary={item.text} 
+                    secondary={item.description}
+                    primaryTypographyProps={{ 
+                      fontWeight: (location.pathname === item.path || location.pathname.startsWith(item.path + '/')) ? 700 : 400 
+                    }}
+                  />
                 </ListItemButton>
               </ListItem>
             ))}
           </AccordionDetails>
         </Accordion>
 
-        {/* Profile */}
+        {/* Browse Services */}
+        {/* <ListItem disablePadding>
+          <ListItemButton 
+            onClick={() => handleNavigation('/customer/browse-services')} 
+            selected={location.pathname === '/customer/browse-services' || location.pathname.startsWith('/customer/browse-services/')}
+            sx={{
+              '&.Mui-selected': {
+                bgcolor: '#E6F7F8',
+                '&:hover': {
+                  bgcolor: '#E6F7F8',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: 4,
+                  bgcolor: '#003047',
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><SearchIcon/></ListItemIcon>
+            <ListItemText 
+              primary="Browse Services" 
+              secondary="Find beauty services" 
+              primaryTypographyProps={{ 
+                fontWeight: (location.pathname === '/customer/browse-services' || location.pathname.startsWith('/customer/browse-services/')) ? 700 : 400 
+              }}
+            />
+          </ListItemButton>
+        </ListItem> */}
+
+        {/* Profile Settings */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/customer/profile')} selected={location.pathname === '/customer/profile'}>
-            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><ProfileIcon/></ListItemIcon>
-            <ListItemText primary="Profile" secondary="Manage details, change password, delete account" />
+          <ListItemButton 
+            onClick={() => handleNavigation('/profile-settings')} 
+            selected={location.pathname === '/profile-settings'}
+            sx={{
+              '&.Mui-selected': {
+                bgcolor: '#E6F7F8',
+                '&:hover': {
+                  bgcolor: '#E6F7F8',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: 4,
+                  bgcolor: '#003047',
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><SettingsIcon/></ListItemIcon>
+            <ListItemText 
+              primary="Profile Settings" 
+              secondary="Adjust your profile settings"
+              primaryTypographyProps={{ 
+                fontWeight: location.pathname === '/profile-settings' ? 700 : 400 
+              }}
+            />
           </ListItemButton>
         </ListItem>
       </List>
@@ -128,6 +264,9 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       <Box sx={{ p: 2, mt: 'auto' }}>
         <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Customer Portal
+        </Typography>
+        <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center', mt: 1 }}>
+          Current Page: {getCurrentPageName()}
         </Typography>
       </Box>
     </Drawer>

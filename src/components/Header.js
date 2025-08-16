@@ -26,7 +26,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const Header = () => {
+const Header = ({ toggleSidebar, pageTitle }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
@@ -110,6 +110,26 @@ const Header = () => {
       backgroundColor: '#E6F7F8',
       color: '#001F3F',
     },
+  };
+
+  // Map routes to page titles if pageTitle prop is not provided
+  const getPageTitle = () => {
+    if (pageTitle) return pageTitle;
+    
+    const pathToTitle = {
+      '/customer-dashboard': 'Customer Dashboard',
+      '/customer/browse-services': 'Browse Services',
+      '/customer/my-bookings': 'My Bookings',
+      '/customer/appointment-history': 'Appointment History',
+      '/customer/book-service': 'Book Service',
+      '/profile-settings': 'Profile Settings',
+      '/customer/provider-details': 'Service Provider Details'
+    };
+    
+    // Find the matching path or return default
+    return pathToTitle[location.pathname] || 
+           pathToTitle[location.pathname.split('/').slice(0, 3).join('/')] || 
+           'BeautiQ';
   };
 
   return (
