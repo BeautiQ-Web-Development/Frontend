@@ -606,28 +606,39 @@ const ProfileSettingsPage = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: '#FFFFFF', fontWeight: 600 }}>
             Profile Settings
           </Typography>
-          <Button 
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-            sx={{
-              bgcolor: 'white',
-              color: '#003047',
-              fontWeight: 600,
-              border: '1px solid #003047',
-              borderRadius: 2,
-              px: 2,
-              py: 0.5,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                bgcolor: '#003047',
-                color: 'white',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-              }
-            }}
-          >
-            Logout
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', color: '#FFFFFF', ml: 2 }}>
+            <Typography variant="body1" sx={{ mr: 2 }}>
+              {user.businessName || user.fullName} ({user.role})
+            </Typography>
+            <Typography variant="body2">
+              {new Date().toLocaleString()}
+            </Typography>
+          </Box>
+          {/* Hide header logout for service providers; sidebar has logout */}
+          {user.role !== 'serviceProvider' && (
+            <Button 
+              onClick={handleLogout}
+              startIcon={<LogoutIcon />}
+              sx={{
+                bgcolor: 'white',
+                color: '#003047',
+                fontWeight: 600,
+                border: '1px solid #003047',
+                borderRadius: 2,
+                px: 2,
+                py: 0.5,
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: '#003047',
+                  color: 'white',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                }
+              }}
+            >
+              Logout
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
 

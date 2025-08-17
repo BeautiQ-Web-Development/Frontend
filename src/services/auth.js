@@ -1,4 +1,4 @@
-//frontendCodes : services/auth.js
+//frontendCodes : services/auth.js - FIXED FOR BOTH CUSTOMER AND SERVICE PROVIDER
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000';
@@ -128,91 +128,6 @@ export const register = async (data, role) => {
   return res.data;
 };
 
-// export const registerServiceProvider = async (userData) => {
-//   try {
-//     // Create FormData for file uploads
-//     const formData = new FormData();
-    
-//     // Add basic fields
-//     formData.append('fullName', userData.fullName || '');
-//     formData.append('emailAddress', userData.emailAddress || '');
-//     formData.append('mobileNumber', userData.mobileNumber || '');
-//     formData.append('nicNumber', userData.nicNumber || '');
-//     formData.append('password', userData.password || '');
-//     formData.append('currentAddress', userData.currentAddress || '');
-//     formData.append('homeAddress', userData.homeAddress || '');
-    
-//     // Business fields
-//     formData.append('businessName', userData.businessName || '');
-//     formData.append('businessDescription', userData.businessDescription || '');
-//     formData.append('businessType', userData.businessType || '');
-//     formData.append('city', userData.city || '');
-//     formData.append('experienceYears', userData.experienceYears || '0');
-    
-//     // Transform services to match backend expectations
-//     const transformedServices = userData.services.map(service => ({
-//       name: service.name || '',
-//       type: service.type || '',
-//       category: service.category || '',
-//       description: service.description || '',
-//       price: parseFloat(service.price) || 0,
-//       duration: parseInt(service.duration) || 60,
-//       location: service.location || 'both'
-//     }));
-//     formData.append('services', JSON.stringify(transformedServices));
-    
-//     // Location data
-//     const locationData = {
-//       city: userData.city || '',
-//       serviceArea: userData.businessType === 'mobile_service' ? 'mobile' : 'fixed'
-//     };
-//     formData.append('location', JSON.stringify(locationData));
-    
-//     // Additional data
-//     const specialties = [...new Set(userData.services.map(service => service.type).filter(Boolean))];
-//     formData.append('specialties', JSON.stringify(specialties));
-//     formData.append('languages', JSON.stringify(['English']));
-    
-//     const policiesData = {
-//       cancellation: '24 hours notice required for cancellation',
-//       paymentMethods: ['cash'],
-//       advanceBooking: 30
-//     };
-//     formData.append('policies', JSON.stringify(policiesData));
-    
-//     // File uploads
-//     if (userData.profilePhoto instanceof File) {
-//       formData.append('profilePhoto', userData.profilePhoto);
-//     }
-//     if (userData.nicFrontPhoto instanceof File) {
-//       formData.append('nicFrontPhoto', userData.nicFrontPhoto);
-//     }
-//     if (userData.nicBackPhoto instanceof File) {
-//       formData.append('nicBackPhoto', userData.nicBackPhoto);
-//     }
-
-//     // Add role
-//     formData.append('role', 'serviceProvider');
-
-//     console.log('Service Provider registration attempt:', { email: userData.emailAddress });
-
-//     // use our api instance so CORS, baseURL, timeouts, etc. are applied
-//     const response = await api.post('/auth/register-service-provider', formData, {
-//       headers: { 'Content-Type': 'multipart/form-data' }
-//     });
-    
-//     return response.data;
-//   } catch (error) {
-//     console.error('Service Provider registration error:', error);
-    
-//     if (error.code === 'ERR_NETWORK') {
-//       throw new Error('Unable to connect to server. Please check if the backend server is running on http://localhost:5000');
-//     }
-    
-//     throw error.response?.data || { message: error.message || 'Service provider registration failed' };
-//   }
-// };
-
 // SAFE VERSION: Completely avoids services array processing
 export const registerServiceProviderNoServices = async (formData) => {
   try {
@@ -321,26 +236,6 @@ export const requestPasswordReset = async (emailAddress) => {
   }
 };
 
-// export const resetPassword = async (resetToken, newPassword) => {
-//   try {
-//     const response = await api.post('/auth/reset-password', {
-//       resetToken,
-//       newPassword
-//     });
-    
-//     if (!response.data.success) {
-//       throw new Error(response.data.message || 'Failed to reset password');
-//     }
-    
-//     return response.data;
-//   } catch (error) {
-//     console.error('Reset password error:', error);
-//     throw error.response?.data || {
-//       message: 'Failed to reset password. Please try again.'
-//     };
-//   }
-// };
-
 // ✅ FIX 1: Update auth.js service (services/auth.js)
 export const resetPassword = async (resetToken, newPassword) => {
   try {
@@ -374,8 +269,6 @@ export const resetPassword = async (resetToken, newPassword) => {
   }
 };
 
-
-
 export const getProfile = async () => {
   try {
     const response = await api.get('/auth/profile');
@@ -386,30 +279,139 @@ export const getProfile = async () => {
   }
 };
 
-// New functions for profile settings
+// CRITICAL FIX: Role-based profile update function
 export const updateUserDetails = async (userData) => {
   try {
+    console.log('🔄 Starting profile update request...');
+    
     const token = localStorage.getItem('token');
-    const response = await api.post('/auth/update-profile', userData, {
-      headers: { Authorization: `Bearer ${token}` }
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // Decode the token to get user role
+    let userRole;
+    try {
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      userRole = tokenPayload.role;
+      console.log('👤 User role from token:', userRole);
+    } catch (decodeError) {
+      console.error('❌ Failed to decode token:', decodeError);
+      throw new Error('Invalid authentication token');
+    }
+
+    let endpoint;
+    let requestData = userData;
+
+    // CRITICAL FIX: Use different endpoints based on user role
+    if (userRole === 'serviceProvider') {
+      endpoint = '/auth/service-provider/update-profile';
+      console.log('🏢 Using service provider update endpoint');
+    } else if (userRole === 'customer') {
+      endpoint = '/auth/update-profile';
+      console.log('👤 Using customer update endpoint');
+    } else {
+      throw new Error(`Unsupported user role for profile updates: ${userRole}`);
+    }
+
+    console.log('📤 Sending request to:', endpoint);
+    console.log('📋 Request data:', Object.keys(requestData));
+
+    const response = await api.post(endpoint, requestData, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
+
+    console.log('✅ Profile update response:', response.data);
     return response.data;
+
   } catch (error) {
-    console.error('Update profile error:', error);
-    throw error.response?.data || { message: 'Failed to update profile details' };
+    console.error('❌ Update profile error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
+    // Handle specific errors
+    if (error.response?.status === 403) {
+      const errorData = error.response.data;
+      if (errorData.accountDeactivated) {
+        throw new Error('Your account has been deactivated. Please contact support.');
+      } else if (errorData.error === 'INSUFFICIENT_PERMISSIONS') {
+        throw new Error(`Access denied. ${errorData.message}`);
+      }
+    }
+    
+    throw error.response?.data || { message: error.message || 'Failed to update profile details' };
   }
 };
 
+// CRITICAL FIX: Role-based account deletion function
 export const requestAccountDeletion = async (reason) => {
   try {
+    console.log('🗑️ Starting account deletion request...');
+    
     const token = localStorage.getItem('token');
-    const response = await api.post('/auth/request-account-deletion', { reason }, {
-      headers: { Authorization: `Bearer ${token}` }
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // Decode the token to get user role
+    let userRole;
+    try {
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      userRole = tokenPayload.role;
+      console.log('👤 User role from token:', userRole);
+    } catch (decodeError) {
+      console.error('❌ Failed to decode token:', decodeError);
+      throw new Error('Invalid authentication token');
+    }
+
+    let endpoint;
+
+    // CRITICAL FIX: Use different endpoints based on user role
+    if (userRole === 'serviceProvider') {
+      endpoint = '/auth/service-provider/request-account-deletion';
+      console.log('🏢 Using service provider deletion endpoint');
+    } else if (userRole === 'customer') {
+      endpoint = '/auth/request-account-deletion';
+      console.log('👤 Using customer deletion endpoint');
+    } else {
+      throw new Error(`Unsupported user role for account deletion: ${userRole}`);
+    }
+
+    console.log('📤 Sending deletion request to:', endpoint);
+
+    const response = await api.post(endpoint, { reason }, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
+
+    console.log('✅ Account deletion response:', response.data);
     return response.data;
+
   } catch (error) {
-    console.error('Account deletion request error:', error);
-    throw error.response?.data || { message: 'Failed to submit account deletion request' };
+    console.error('❌ Account deletion request error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
+    // Handle specific errors
+    if (error.response?.status === 403) {
+      const errorData = error.response.data;
+      if (errorData.accountDeactivated) {
+        throw new Error('Your account has been deactivated. Please contact support.');
+      }
+    }
+    
+    throw error.response?.data || { message: error.message || 'Failed to submit account deletion request' };
   }
 };
 
@@ -431,6 +433,42 @@ export const getApprovedProviders = async (providerId) => {
     console.error('Error fetching approved providers:', error);
     throw error.response?.data || { message: error.message };
   }
+}
+
+// Fetch all service providers with pending profile updates or deletion requests
+export const getPendingProviderUpdates = async () => {
+  try {
+    const response = await api.get('/auth/service-providers/pending-updates');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching pending provider updates:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Approve a service provider's update or deletion request
+export const approveProviderUpdate = async (providerId) => {
+  try {
+    const response = await api.put(`/auth/admin/approve-service-provider-update/${providerId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error approving provider update:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Reject a service provider's update or deletion request
+export const rejectProviderUpdate = async (providerId, rejectionReason) => {
+  try {
+    const response = await api.put(
+      `/auth/admin/reject-service-provider-update/${providerId}`,
+      { rejectionReason }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error rejecting provider update:', error);
+    throw error.response?.data || { message: error.message };
+  }
 };
 
 export const approveServiceProvider = async (providerId) => {
@@ -438,6 +476,19 @@ export const approveServiceProvider = async (providerId) => {
     const response = await api.put(`/auth/approve-provider/${providerId}`);
     return response.data;
   } catch (error) {
+    throw error.response?.data || { message: error.message };
+  }
+};
+// Reject a service provider registration request
+export const rejectServiceProvider = async (providerId, reason) => {
+  try {
+    const response = await api.put(
+      `/auth/reject-provider/${providerId}`,
+      { reason }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error rejecting service provider:', error);
     throw error.response?.data || { message: error.message };
   }
 };
@@ -484,9 +535,22 @@ export const verifyToken = async () => {
   }
 };
 
+// Helper function to get user role from token
+export const getUserRoleFromToken = () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role;
+  } catch (error) {
+    console.error('Failed to decode token:', error);
+    return null;
+  }
+};
+
 // expose service helpers on the axios instance
 api.login = login;
 
 // export the axios instance so dashboard can import it as default
 export default api;
-

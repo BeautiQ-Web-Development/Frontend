@@ -61,9 +61,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/footer';
 import AdminSidebar from '../../components/AdminSidebar';
-import api from '../../services/auth';
-import { approveServiceProvider } from '../../services/auth';
-import { rejectServiceProvider } from '../../services/notification';
+import api, { approveServiceProvider, rejectServiceProvider, approveProviderUpdate, rejectProviderUpdate } from '../../services/auth';
 import { styled } from '@mui/material/styles';
 import { adminServicesAPI } from '../../services/services';
 
@@ -179,36 +177,39 @@ const ServiceManagementAdmin = () => {
       
       const [providersRes, servicesRes, pendingServicesRes] = await Promise.all([
         api.get('/auth/service-providers'),
-        api.get('/services/admin/all'),
-        api.get('/services/admin/pending')
+        adminServicesAPI.getAllServices(),
+        adminServicesAPI.getPendingServices()
       ]);
 
       console.log('📊 Data received:', {
         providers: providersRes.data.providers?.length || 0,
-        services: servicesRes.data.services?.length || 0,
-        pending: pendingServicesRes.data.pendingServices?.length || 0
+        services: servicesRes.services?.length || 0,
+        pending: pendingServicesRes.pendingServices?.length || 0
       });
 
       if (providersRes.data.success) {
-        setServiceProviders(providersRes.data.providers || providersRes.data.data || []);
+        setServiceProviders(providersRes.data.providers || []);
       }
       
-      if (servicesRes.data.success) {
-        const allServices = servicesRes.data.services || servicesRes.data.data || [];
-        const pendingServices = pendingServicesRes.data.success ? 
-          (pendingServicesRes.data.pendingServices || pendingServicesRes.data.data || []) : [];
+      if (servicesRes.success) {
+        const allServices = servicesRes.services || [];
+        const pendingServices = pendingServicesRes.success ? pendingServicesRes.pendingServices || [] : [];
         
-        const validServices = allServices.filter(service => service != null);
-        const validPendingServices = pendingServices.filter(service => service != null);
+  const validServices = allServices.filter(service => service != null);
+  const validPendingServices = pendingServices.filter(service => service != null);
         
+        // Override existing services with pending updates/deletes
         const combinedServices = [...validServices];
-        validPendingServices.forEach(pendingService => {
-          if (!combinedServices.find(s => s._id === pendingService._id)) {
-            combinedServices.push(pendingService);
+        validPendingServices.forEach(pending => {
+          const idx = combinedServices.findIndex(s => s._id === pending._id);
+          if (idx !== -1) {
+            combinedServices[idx] = pending;
+          } else {
+            combinedServices.push(pending);
           }
         });
         
-        setServices(combinedServices);
+  setServices(combinedServices);
         console.log(`✅ Total services loaded: ${combinedServices.length}`);
       }
       
@@ -313,7 +314,8 @@ const ServiceManagementAdmin = () => {
       console.log(`🔄 Rejecting ${rejectType} ${rId} with reason: "${rejectReason.trim()}"`);
       
       if (rejectType === 'provider') {
-        await rejectServiceProvider(rId, rejectReason.trim());
+        // Reject pending provider profile update or deletion request
+        await rejectProviderUpdate(rId, rejectReason.trim());
       }
       else if (rejectType === 'service') {
         // use service wrapper to call POST /services/admin/:id/reject
@@ -388,9 +390,19 @@ const ServiceManagementAdmin = () => {
     try {
       setLoading(true);
       if (action === 'approve') {
-        await approveServiceProvider(id);
+        // Check if this is a pending profile update or deletion request
+        const provider = serviceProviders.find(p => p._id === id);
+        if (provider.pendingUpdates?.status === 'pending') {
+          // Approve update/delete request
+          await approveProviderUpdate(id);
+        } else {
+          // Approve new registration
+          await approveServiceProvider(id);
+        }
       } else {
-        await rejectServiceProvider(id, 'Your registration was declined');
+        // Trigger rejection dialog for registration requests
+        handleOpenRejectDialog(id, 'provider');
+        return;
       }
       await fetchData();
     } catch (err) {
@@ -560,6 +572,8 @@ const ServiceManagementAdmin = () => {
               <HeaderCell>Location</HeaderCell>
               <HeaderCell>Registration Date</HeaderCell>
               <HeaderCell>Status</HeaderCell>
+              <HeaderCell>Deleted At</HeaderCell>
+              <HeaderCell>Deletion Reason</HeaderCell>
               <HeaderCell align="center">Actions</HeaderCell>
             </TableRow>
           </TableHead>
@@ -620,7 +634,27 @@ const ServiceManagementAdmin = () => {
                   </Typography>
                 </TableCell>
                 <TableCell>{formatDate(provider.createdAt)}</TableCell>
-                <TableCell>{getStatusChip(provider.approvalStatus)}</TableCell>
+                <TableCell>
+                  {provider.isActive === false ? (
+                    // Deleted account
+                    getStatusChip('deleted')
+                  ) : provider.pendingUpdates?.status === 'pending' ? (
+                    <Chip
+                      label={provider.pendingUpdates.deleteRequested ? 'Delete Request' : 'Update Request'}
+                      color="warning"
+                      size="small"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  ) : (
+                    getStatusChip(provider.approvalStatus)
+                  )}
+                </TableCell>
+                <TableCell>
+                  {provider.isActive === false && formatDate(provider.deletedAt)}
+                </TableCell>
+                <TableCell>
+                  {provider.isActive === false && provider.deletionReason}
+                </TableCell>
                 <TableCell align="center">
                   <IconButton
                     onClick={(e) => { e.stopPropagation(); handleViewDetails(provider, 'provider'); }}
@@ -628,7 +662,7 @@ const ServiceManagementAdmin = () => {
                   >
                     <ViewIcon />
                   </IconButton>
-                  {provider.approvalStatus === 'pending' && (
+                  {(provider.approvalStatus === 'pending' || provider.pendingUpdates?.status === 'pending') && (
                     <>
                       <IconButton
                         onClick={(e) => { e.stopPropagation(); handleProviderAction(provider._id, 'approve'); }}
@@ -850,6 +884,14 @@ const ServiceManagementAdmin = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700, color: '#fafafa' }}>
              BeautiQ Admin Dashboard
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', color: '#fafafa', ml: 2 }}>
+            <Typography variant="body1" sx={{ mr: 2 }}>
+              {user.fullName} ({user.role})
+            </Typography>
+            <Typography variant="body2">
+              {new Date().toLocaleString()}
+            </Typography>
+          </Box>
           <Button 
             onClick={handleLogout}
             startIcon={<LogoutIcon />}
@@ -973,13 +1015,20 @@ const ServiceManagementAdmin = () => {
                   indicatorColor="primary"
                   sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
-                  <Tab label={`All Details (${serviceProviders.length})`} />
-                  <Tab label={`Update Requests (${serviceProviders.filter(p => p.approvalStatus === 'pending').length})`} />
-                  <Tab label={`Delete Requests (${serviceProviders.filter(p => p.isActive === false).length})`} />
+                  <Tab label={`All Providers (${serviceProviders.length})`} />
+                  <Tab label={`Update Requests (${serviceProviders.filter(p => p.pendingUpdates?.status === 'pending' && !p.pendingUpdates?.deleteRequested).length})`} />
+                  <Tab label={`Deleted Providers (${serviceProviders.filter(p => p.isActive === false).length})`} />
                 </Tabs>
                 {providerSubTab === 0 && renderServiceProvidersTable()}
-                {providerSubTab === 1 && renderServiceProvidersTable(serviceProviders.filter(p => p.approvalStatus === 'pending'))}
-                {providerSubTab === 2 && renderServiceProvidersTable(serviceProviders.filter(p => p.isActive === false))}
+                {providerSubTab === 1 && renderServiceProvidersTable(
+                  serviceProviders.filter(
+                    p => p.pendingUpdates?.status === 'pending' && !p.pendingUpdates?.deleteRequested
+                  )
+                )}
+                {providerSubTab === 2 && renderServiceProvidersTable(
+                  // Show deleted providers after admin approval
+                  serviceProviders.filter(p => p.isActive === false)
+                )}
               </>
             )}
             {currentTab === 1 && (
@@ -1185,7 +1234,7 @@ const ServiceManagementAdmin = () => {
                       <Grid item xs={12} sm={6}>
                         <Typography variant="subtitle2" color="text.secondary">Current Status</Typography>
                         <Box sx={{ mb: 1 }}>
-                          {getStatusChip(detailsDialog.item.approvalStatus)}
+                          {getStatusChip(detailsDialog.item.isActive === false ? 'deleted' : detailsDialog.item.approvalStatus)}
                         </Box>
                       </Grid>
                       {detailsDialog.item.approvedAt && (
@@ -1208,6 +1257,22 @@ const ServiceManagementAdmin = () => {
                             <Typography variant="subtitle2" color="text.secondary">Rejection Reason</Typography>
                             <Typography variant="body1" sx={{ color: '#f44336' }}>
                               {detailsDialog.item.rejectionReason || 'No reason provided'}
+                            </Typography>
+                          </Grid>
+                        </>
+                      )}
+                      {detailsDialog.item.deletedAt && (
+                        <>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">Deleted Date</Typography>
+                            <Typography variant="body1" sx={{ color: '#616161', fontWeight: 500 }}>
+                              {formatDate(detailsDialog.item.deletedAt)}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="text.secondary">Deletion Reason</Typography>
+                            <Typography variant="body1" sx={{ color: '#616161' }}>
+                              {detailsDialog.item.deletionReason || 'No reason provided'}
                             </Typography>
                           </Grid>
                         </>
