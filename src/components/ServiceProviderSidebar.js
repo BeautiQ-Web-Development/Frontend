@@ -8,7 +8,10 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Divider
+  Divider,
+  Avatar,
+  Tooltip,
+  Button
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -103,60 +106,59 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
       variant="temporary"
       sx={{
         '& .MuiDrawer-paper': {
-          width: 300,
+          width: 280,
           bgcolor: '#F8F8FF',
-          borderRight: '1px solid #003047',
+          borderRight: '2px solid #003047',
+          boxShadow: 3,
           zIndex: 1300
         }
       }}
     >
-      <Box sx={{ p: 3, bgcolor: '#003047' }}>
-        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-          {user?.businessName || 'Service Provider'}
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
-          {user?.fullName}
-        </Typography>
+      <Box sx={{ p: 2, bgcolor: '#003047', display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Avatar sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 48, height: 48 }}>
+          {user?.fullName?.charAt(0) || 'S'}
+        </Avatar>
+        <Box>
+          <Typography variant="h6" sx={{ color: '#E6F7F8', fontWeight: 600, fontSize: '1rem' }}>
+            {user?.businessName || 'Service Provider'}
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#C5E8EA', fontSize: '0.85rem' }}>
+            {user?.fullName}
+          </Typography>
+        </Box>
       </Box>
 
       <List sx={{ pt: 0 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              onClick={() => handleItemClick(item)}
-              selected={item.path && location.pathname === item.path}
-              sx={{
-                py: 1.5,
-                '&.Mui-selected': {
-                  bgcolor: '#CCF0F2',
-                  '&:hover': {
-                    bgcolor: '#B8E6E9'
-                  }
-                },
-                '&:hover': {
-                  bgcolor: '#F0FAFB'
-                }
-              }}
-            >
-              <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text}
-                secondary={item.description}
-                sx={{ 
-                  '& .MuiListItemText-primary': {
-                    fontWeight: item.path && location.pathname === item.path ? 'bold' : 'normal',
-                    color: '#003047',
-                    fontSize: '0.95rem'
+            <Tooltip title={item.description} placement="right" arrow>
+              <ListItemButton
+                onClick={() => handleItemClick(item)}
+                selected={item.path && location.pathname === item.path}
+                sx={{
+                  py: 1.5,
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(0,48,71,0.1)',
+                    '&:hover': { bgcolor: 'rgba(0,48,71,0.15)' }
                   },
-                  '& .MuiListItemText-secondary': {
-                    color: '#003047',
-                    fontSize: '0.75rem'
-                  }
+                  '&:hover': { bgcolor: 'rgba(0,48,71,0.05)' }
                 }}
-              />
-            </ListItemButton>
+              >
+                <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.text}
+                  sx={{ 
+                    '& .MuiListItemText-primary': {
+                      fontWeight: item.path && location.pathname === item.path ? 600 : 400,
+                      color: '#003047',
+                      fontSize: '0.95rem'
+                    }
+                  }}
+                />
+              </ListItemButton>
+            </Tooltip>
           </ListItem>
         ))}
       </List>
@@ -196,8 +198,16 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
         </ListItem>
       </List> */}
 
-      <Box sx={{ p: 2, mt: 'auto' }}>
-        <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
+      <Box sx={{ p: 2, mt: 'auto', textAlign: 'center' }}>
+        <Button
+          variant="outlined"
+          startIcon={<LogoutIcon />}
+          onClick={() => { onClose && onClose(); navigate('/login'); }}
+          sx={{ color: '#003047', borderColor: '#003047', textTransform: 'none' }}
+        >
+          Logout
+        </Button>
+        <Typography variant="caption" sx={{ color: '#777', display: 'block', mt: 1 }}>
           BeautiQ Service Provider Portal
         </Typography>
       </Box>
