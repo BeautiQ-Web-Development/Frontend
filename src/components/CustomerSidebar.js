@@ -64,6 +64,12 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       path: '/profile-settings',
       icon: <SettingsIcon />,
       description: 'Manage your account'
+    },
+    {
+      text: 'Notifications',
+      path: '/customer/notifications',
+      icon: <RemindersIcon />,
+      description: 'View your notifications'
     }
   ];
 
@@ -254,6 +260,40 @@ const CustomerSidebar = ({ open, onClose, user }) => {
               secondary="Adjust your profile settings"
               primaryTypographyProps={{ 
                 fontWeight: location.pathname === '/profile-settings' ? 700 : 400 
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Notifications - New Menu Item */}
+        <ListItem disablePadding>
+          <ListItemButton 
+            onClick={() => handleNavigation('/customer/notifications')} 
+            selected={location.pathname === '/customer/notifications'}
+            sx={{
+              '&.Mui-selected': {
+                bgcolor: '#E6F7F8',
+                '&:hover': {
+                  bgcolor: '#E6F7F8',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: 4,
+                  bgcolor: '#003047',
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><RemindersIcon/></ListItemIcon>
+            <ListItemText 
+              primary="Notifications" 
+              secondary="View your notifications"
+              primaryTypographyProps={{ 
+                fontWeight: location.pathname === '/customer/notifications' ? 700 : 400 
               }}
             />
           </ListItemButton>
