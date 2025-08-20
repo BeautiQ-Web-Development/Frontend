@@ -28,6 +28,7 @@ import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
 import CustomerBookServicePage from './pages/customer/Customer.CustomerBookServicePage';
 import ProfileSettingsPage from './pages/profile/ProfileSettingsPage';
+import CustomerNotificationsPage from './pages/customer/Customer.NotificationsPage';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -154,6 +155,14 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route
+  path="/customer/notifications"
+  element={
+    <ProtectedRoute allowedRoles={['customer']}>
+      <CustomerNotificationsPage />
+    </ProtectedRoute>
+  }
+/>
         </Routes>
     </CleanBackground>
   );

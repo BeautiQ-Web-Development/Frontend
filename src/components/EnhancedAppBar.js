@@ -72,7 +72,7 @@ const EnhancedAppBar = ({
   const handleNotifClick = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-  const handleNotificationClick = (notification) => {
+    const handleNotificationClickItem = (notification) => {
     if (role === 'admin') {
       // Navigate to notifications page with the specific notification
       navigate('/admin/notifications', { 
@@ -84,6 +84,8 @@ const EnhancedAppBar = ({
     } else if (role === 'serviceProvider') {
       // Handle service provider notifications
       navigate('/service-provider/notifications');
+      } else if (role === 'customer') {
+        navigate('/customer/notifications', { state: { selectedNotification: notification } });
     }
     handleClose();
   };
@@ -93,6 +95,8 @@ const EnhancedAppBar = ({
       navigate('/admin/notifications');
     } else if (role === 'serviceProvider') {
       navigate('/service-provider/notifications');
+      } else if (role === 'customer') {
+        navigate('/customer/notifications');
     }
     handleClose();
   };
@@ -156,12 +160,12 @@ const EnhancedAppBar = ({
               sx: { maxWidth: 350, maxHeight: 400 }
             }}
           >
-            {notificationsList.length > 0 ? (
-              <>
-                {notificationsList.slice(0, 5).map((notification, index) => (
+            {notificationsList.length > 0 ? [
+                // Map through notifications (returns an array of MenuItems)
+                ...notificationsList.slice(0, 5).map((notification, index) => (
                   <MenuItem 
-                    key={notification.id || index} 
-                    onClick={() => handleNotificationClick(notification)}
+                    key={notification.id || notification._id || index} 
+                    onClick={() => handleNotificationClickItem(notification)}
                     sx={{ 
                       whiteSpace: 'normal',
                       py: 1.5,
@@ -171,18 +175,23 @@ const EnhancedAppBar = ({
                   >
                     <Box>
                       <Typography variant="body2" fontWeight="bold">
-                        New Service Provider Registration
+                        {notification.type === 'providerUnavailable' ? 'Service Provider Unavailable' :
+                         notification.type === 'serviceUnavailable' ? 'Service Unavailable' :
+                         'New Notification'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {notification.data?.businessName || notification.data?.fullName}
+                        {notification.message || 
+                         (notification.data?.businessName || notification.data?.fullName || 'No details')}
                       </Typography>
                       <Typography variant="caption" display="block" color="text.secondary">
                         {new Date(notification.timestamp).toLocaleDateString()}
                       </Typography>
                     </Box>
                   </MenuItem>
-                ))}
+                )),
+                // Add the "View All" menu item at the end
                 <MenuItem 
+                  key="view-all"
                   onClick={handleViewAllNotifications}
                   sx={{ 
                     textAlign: 'center', 
@@ -193,8 +202,7 @@ const EnhancedAppBar = ({
                 >
                   View All Notifications ({notifications})
                 </MenuItem>
-              </>
-            ) : (
+            ] : (
               <MenuItem onClick={handleClose} sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
                   No new notifications

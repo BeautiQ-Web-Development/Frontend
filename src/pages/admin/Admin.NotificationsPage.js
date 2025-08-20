@@ -1,3 +1,5 @@
+
+//Admin.NotificationsPage.js
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -28,7 +30,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Footer from '../../components/footer';
 import AdminSidebar from '../../components/AdminSidebar';
 import EnhancedAppBar from '../../components/EnhancedAppBar';
-import { fetchNotifications, approveServiceProvider, rejectServiceProvider } from '../../services/notification';
+import { 
+  fetchNotifications, 
+  approveServiceProvider, 
+  rejectServiceProvider,
+  markAsRead,
+  markAllAsRead,
+  connectToSocket,
+  getSocket 
+} from '../../services/notification';
 import api from '../../services/auth';
 import { styled } from '@mui/material/styles';
 
@@ -60,23 +70,70 @@ const AdminNotifications = () => {
   useEffect(() => {
     fetchNotificationData();
     
+    // Connect to socket.io for real-time notifications
+    if (user && user.userId) {
+      const token = localStorage.getItem('token');
+      const socket = connectToSocket(user.userId, token);
+      
+      // Listen for new notifications
+      socket.on('newNotification', (notification) => {
+        console.log('📨 Admin received new notification:', notification);
+        
+        // Add new notification to state
+        setNotifications(prev => [notification, ...prev]);
+        
+        // Optional: Play notification sound
+        try {
+          const audio = new Audio('/notification-sound.mp3');
+          audio.play().catch(e => console.log('Audio play prevented:', e));
+        } catch (err) {
+          console.log('Audio not supported');
+        }
+      });
+      
+      // Cleanup on unmount
+      return () => {
+        const socket = getSocket();
+        if (socket) {
+          socket.off('newNotification');
+        }
+      };
+    }
+    
     // Check if navigated from AppBar with selected notification
     if (location.state?.selectedNotification) {
       setSelectedRequest(location.state.selectedNotification);
       setDetailsDialog(true);
     }
-  }, [location.state]);
+  }, [location.state, user]);
 
+  // Enhanced function to fetch notifications
   const fetchNotificationData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching notifications for admin');
       const response = await fetchNotifications();
       setNotifications(response || []);
+      console.log(`✅ Fetched ${response.length} notifications`);
     } catch (error) {
       setError('Failed to load notifications');
-      console.error('Fetch notifications error:', error);
+      console.error('❌ Fetch notifications error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add function to mark notification as read
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markAsRead(notificationId);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
+      );
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
     }
   };
 
@@ -146,8 +203,10 @@ const AdminNotifications = () => {
         onMenuClick={toggleSidebar}
         onLogout={handleLogout}
         title="Notifications"
-        notifications={notifications.length}
+        notifications={notifications.filter(n => !n.read).length}
         notificationsList={notifications}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={markAllAsRead}
       />
 
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />

@@ -5,6 +5,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Create a theme instance
 const theme = createTheme({
@@ -88,12 +89,14 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <App />
-        </Router>
-      </ThemeProvider>
+      <NotificationProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <App />
+          </Router>
+        </ThemeProvider>
+      </NotificationProvider>
     </AuthProvider>
   </React.StrictMode>
 );

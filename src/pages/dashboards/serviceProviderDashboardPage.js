@@ -56,7 +56,13 @@ import RevenueChart from '../../components/RevenueChart';
 import ServicePerformanceChart from '../../components/ServicePerformanceChart';
 import ServiceProviderSidebar from '../../components/ServiceProviderSidebar';
 import api from '../../services/auth';
-import { fetchNotifications } from '../../services/notification';
+import { 
+  fetchNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  connectToSocket, 
+  getSocket 
+} from '../../services/notification';
 import { styled } from '@mui/system';
 import EnhancedAppBar from '../../components/EnhancedAppBar';
 
@@ -104,6 +110,7 @@ const ServiceProviderDashboard = () => {
     completionRate: 0
   });
   const [notificationsList, setNotificationsList] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [packageForm, setPackageForm] = useState({
     packageName: '',
@@ -125,15 +132,55 @@ const ServiceProviderDashboard = () => {
     fetchPackages();
     fetchServices();
     fetchEnhancedAnalytics();
-    loadNotifications();
+    // Notifications disabled on this dashboard
   }, []);
+
 
   const loadNotifications = async () => {
     try {
-      const notifications = await fetchNotifications();
-      setNotificationsList(notifications || []);
+      console.log('🔄 Loading notifications for service provider');
+      const all = await fetchNotifications();
+      // Filter out registration notifications for service providers
+      const notifications = (user.role === 'serviceProvider')
+        ? all.filter(n => n.type !== 'newServiceProvider')
+        : all;
+      setNotificationsList(notifications);
+      
+      // Calculate unread count
+      const unread = notifications.filter(n => !n.read).length;
+      setUnreadCount(unread);
+      
+      console.log(`✅ Loaded ${notifications.length} notifications (${unread} unread)`);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error('❌ Failed to load notifications:', error);
+    }
+  };
+  
+  // Handler to mark a single notification as read from AppBar
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markAsRead(notificationId);
+      setNotificationsList(prev =>
+        prev.map(n =>
+          (n._id === notificationId || n.id === notificationId)
+            ? { ...n, read: true }
+            : n
+        )
+      );
+      setUnreadCount(prev => (prev > 0 ? prev - 1 : 0));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  // Handler to mark all notifications as read from AppBar
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      setNotificationsList(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
     }
   };
 
@@ -402,8 +449,10 @@ const ServiceProviderDashboard = () => {
         onMenuClick={toggleSidebar}
         onLogout={handleLogout}
         title="Provider Dashboard"
-        notifications={notificationsList.length}
+        notifications={unreadCount}
         notificationsList={notificationsList}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
       />
 
       <ServiceProviderSidebar

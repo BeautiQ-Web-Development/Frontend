@@ -1136,7 +1136,9 @@ import {
   AppBar,
   Toolbar,
   Checkbox,
-  Divider
+  Divider,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -1208,6 +1210,7 @@ const ServiceManagement = () => {
 
   // ENHANCED: Add refresh indicator
   const [refreshing, setRefreshing] = useState(false);
+  const [providerTab, setProviderTab] = useState(0);
 
   const [serviceFormData, setServiceFormData] = useState({
     serviceName: '',
@@ -1687,8 +1690,14 @@ const ServiceManagement = () => {
     setServiceDetailsDialog({ open: true, service });
   };
 
+  // ENHANCED: Determine displayed services based on selected tab
+  const displayedServices = providerTab === 0
+    ? services
+    : providerTab === 1
+      ? services.filter(s => s.pendingChanges?.actionType === 'update')
+      : services.filter(s => s.pendingChanges?.actionType === 'delete');
   // ENHANCED: Better action availability logic
-  const selectableServices = services.filter(s => canDeleteService(s));
+  const selectableServices = displayedServices.filter(s => canDeleteService(s));
   const isSingle = selectedServices.length === 1;
   const selSvc = isSingle ? services.find(s => s._id === selectedServices[0]) : null;
   const editDisabled = !isSingle || !canEditService(selSvc);
@@ -1757,6 +1766,18 @@ const ServiceManagement = () => {
         <Typography variant="h4" gutterBottom sx={{ color: '#003047', fontWeight: 'bold' }}>
           Service Management
         </Typography>
+        <Tabs
+          value={providerTab}
+          onChange={(e, newVal) => setProviderTab(newVal)}
+          variant="fullWidth"
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+        >
+          <Tab label={`All Services (${services.length})`} />
+          <Tab label={`Update Requests (${services.filter(s => s.pendingChanges?.actionType === 'update').length})`} />
+          <Tab label={`Delete Requests (${services.filter(s => s.pendingChanges?.actionType === 'delete').length})`} />
+        </Tabs>
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>

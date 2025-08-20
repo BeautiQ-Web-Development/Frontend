@@ -52,7 +52,13 @@ import {
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { getApprovedProviders } from '../../services/auth';
-import { fetchNotifications } from '../../services/notification';
+import { 
+  fetchNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  connectToSocket, 
+  getSocket 
+} from '../../services/notification';
 import Footer from '../../components/footer';
 import CustomerSidebar from '../../components/CustomerSidebar';
 import { useAuth } from '../../context/AuthContext';
@@ -568,6 +574,7 @@ const CustomerDashboard = () => {
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsList, setNotificationsList] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [services, setServices] = useState([]);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [servicesError, setServicesError] = useState('');
@@ -578,15 +585,16 @@ const CustomerDashboard = () => {
   const categories        = ['Kids','Women','Men','Unisex'];
 
   // filter state
-  const [priceRange,    setPriceRange]    = useState([0,10000]);
+  const [priceRange,    setPriceRange]    = useState([0, 10000]);
+  const [maxPrice,      setMaxPrice]      = useState(10000);
   const [typeSelection, setTypeSelection] = useState([]);
   const [expSelection,  setExpSelection]  = useState([]);
   const [catSelection,  setCatSelection]  = useState([]);
 
   useEffect(() => {
     fetchServiceProviders();
-    loadNotifications();
     fetchApprovedServices();
+    loadNotifications();
   }, []);
 
   const fetchApprovedServices = async () => {
@@ -602,6 +610,12 @@ const CustomerDashboard = () => {
           console.log('First service structure:', res.data.data[0]);
         }
         setServices(res.data.data);
+        // Update price filter range based on received services
+        const data = res.data.data;
+        const prices = data.map(s => s.pricing?.basePrice ?? 0);
+        const newMax = prices.length ? Math.max(...prices) : 10000;
+        setMaxPrice(newMax);
+        setPriceRange([0, newMax]);
       } else {
         setServices([]);
         setServicesError('No approved services available');
@@ -639,10 +653,17 @@ const CustomerDashboard = () => {
 
   const loadNotifications = async () => {
     try {
+      console.log('🔄 Loading notifications for customer');
       const notifications = await fetchNotifications();
       setNotificationsList(notifications || []);
+      
+      // Calculate unread count
+      const unread = notifications.filter(n => !n.read).length;
+      setUnreadCount(unread);
+      
+      console.log(`✅ Loaded ${notifications.length} notifications (${unread} unread)`);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error('❌ Failed to load notifications:', error);
     }
   };
 
@@ -680,6 +701,95 @@ const CustomerDashboard = () => {
     return true;
   });
 
+  useEffect(() => {
+    if (!user || !user.userId) return;
+    
+    // Initial fetch of notifications
+    loadNotifications();
+    
+    // Connect to socket.io for real-time updates
+    const token = localStorage.getItem('token');
+    const socket = connectToSocket(user.userId, token);
+    
+    // Listen for notification events
+    socket.on('newNotification', (notification) => {
+      console.log('📨 Received new notification:', notification);
+      
+      // Add new notification to state
+      setNotificationsList(prev => [notification, ...prev]);
+      
+      // Update unread count
+      setUnreadCount(prev => prev + 1);
+      
+      // Optional: Play notification sound
+      try {
+        const audio = new Audio('/notification-sound.mp3');
+        audio.play().catch(e => console.log('Audio play prevented:', e));
+      } catch (err) {
+        console.log('Audio not supported');
+      }
+    });
+    
+    // Listen for newly approved services
+    socket.on('newServiceApproved', (service) => {
+      console.log('🆕 New service approved:', service);
+      // Prepend to services list
+      setServices(prev => [service, ...prev]);
+      // Notify customer about the new service
+      const notification = {
+        _id: `serviceApproved_${service._id}`,
+        message: `New service "${service.name}" is now available.`,
+        type: 'serviceApproved',
+        data: service,
+        read: false,
+        timestamp: new Date()
+      };
+      setNotificationsList(prev => [notification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      const socket = getSocket();
+      if (socket) {
+        socket.off('newNotification');
+        socket.off('newServiceApproved');
+      }
+    };
+  }, [user]);
+
+  // Add function to mark notification as read
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markAsRead(notificationId);
+      
+      // Update local state
+      setNotificationsList(prev => 
+        prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
+      );
+      
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
+    }
+  };
+  
+  // Add function to mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      
+      // Update local state
+      setNotificationsList(prev => prev.map(n => ({ ...n, read: true })));
+      
+      // Update unread count
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('❌ Error marking all notifications as read:', error);
+    }
+  };
+  
   if (providersLoading) {
     return (
       <Box 
@@ -702,8 +812,10 @@ const CustomerDashboard = () => {
         onMenuClick={toggleSidebar}
         onLogout={handleLogout}
         title="Customer Dashboard"
-        notifications={notificationsList.length}
+        notifications={unreadCount}
         notificationsList={notificationsList}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
       />
       
       <CustomerSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
@@ -803,10 +915,10 @@ const CustomerDashboard = () => {
                       <Typography variant="subtitle2">Price Range (LKR)</Typography>
                       <Slider
                         value={priceRange}
-                        onChange={(e,val)=>setPriceRange(val)}
+                        onChange={(e, val) => setPriceRange(val)}
                         min={0}
-                        max={10000}
-                        step={100}
+                        max={maxPrice}
+                        step={Math.max(1, Math.round(maxPrice / 100))}
                         valueLabelDisplay="auto"
                       />
                     </Box>
