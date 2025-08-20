@@ -16,6 +16,16 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log(`Making ${config.method?.toUpperCase()} request to:`, config.url);
+    
+    // Extra debug for notifications endpoints
+    if (config.url?.includes('/notifications')) {
+      console.log('Notifications API request details:', {
+        headers: config.headers,
+        hasAuthHeader: !!config.headers?.Authorization,
+        data: config.data
+      });
+    }
+    
     return config;
   },
   (error) => {

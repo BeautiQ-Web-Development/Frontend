@@ -1015,18 +1015,21 @@ const ServiceManagementAdmin = () => {
                   indicatorColor="primary"
                   sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
-                  <Tab label={`All Providers (${serviceProviders.length})`} />
+                  {/* Only active providers in "All Providers" */}
+                  <Tab label={`All Providers (${serviceProviders.filter(p => p.isActive !== false).length})`} />
                   <Tab label={`Update Requests (${serviceProviders.filter(p => p.pendingUpdates?.status === 'pending' && !p.pendingUpdates?.deleteRequested).length})`} />
                   <Tab label={`Deleted Providers (${serviceProviders.filter(p => p.isActive === false).length})`} />
                 </Tabs>
-                {providerSubTab === 0 && renderServiceProvidersTable()}
+                {/* Active providers only */}
+                {providerSubTab === 0 && renderServiceProvidersTable(serviceProviders.filter(p => p.isActive !== false))}
+                {/* Pending update requests */}
                 {providerSubTab === 1 && renderServiceProvidersTable(
                   serviceProviders.filter(
                     p => p.pendingUpdates?.status === 'pending' && !p.pendingUpdates?.deleteRequested
                   )
                 )}
+                {/* Deleted providers */}
                 {providerSubTab === 2 && renderServiceProvidersTable(
-                  // Show deleted providers after admin approval
                   serviceProviders.filter(p => p.isActive === false)
                 )}
               </>
