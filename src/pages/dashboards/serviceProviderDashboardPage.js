@@ -32,6 +32,7 @@ import {
   TableRow,
   Alert,
   CircularProgress,
+  Divider,
   Fab
 } from '@mui/material';
 import {
@@ -47,13 +48,11 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Pending as PendingIcon
+  Pending as PendingIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import Footer from '../../components/footer';
-import BookingHeatmapChart from '../../components/BookingHeatmapChart';
-import RevenueChart from '../../components/RevenueChart';
-import ServicePerformanceChart from '../../components/ServicePerformanceChart';
 import ServiceProviderSidebar from '../../components/ServiceProviderSidebar';
 import api from '../../services/auth';
 import { 
@@ -65,8 +64,13 @@ import {
 } from '../../services/notification';
 import { styled } from '@mui/system';
 import EnhancedAppBar from '../../components/EnhancedAppBar';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, PieChart, Pie, Cell
+} from 'recharts';
 
-const ProviderDashboardContainer = styled(Box)(({ theme }) => ({
+// Modify the styled components to use the imported Box and Card
+const ProviderDashboardContainer = styled('div')(({ theme }) => ({
   background: '#FFFFFF',
   minHeight: '100vh',
 }));
@@ -100,9 +104,21 @@ const ServiceProviderDashboard = () => {
   const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
   const [resignationDialogOpen, setResignationDialogOpen] = useState(false);
-  const [heatmapData, setHeatmapData] = useState([]);
-  const [revenueData, setRevenueData] = useState([]);
-  const [servicePerformanceData, setServicePerformanceData] = useState([]);
+  
+  // Updated metrics states
+  const [appointmentsPerDayData, setAppointmentsPerDayData] = useState([]);
+  const [serviceUpdateRequestsCount, setServiceUpdateRequestsCount] = useState(0);
+  const [deleteRequestsCount, setDeleteRequestsCount] = useState(0);
+  const [activeServicesCount, setActiveServicesCount] = useState(0);
+  const [deletedServicesCount, setDeletedServicesCount] = useState(0);
+  
+  // Description panel state
+  const [descriptionPanel, setDescriptionPanel] = useState({
+    open: false,
+    title: '',
+    description: ''
+  });
+  
   const [dashboardMetrics, setDashboardMetrics] = useState({
     weeklyBookings: 0,
     monthlyRevenue: 0,
@@ -131,10 +147,101 @@ const ServiceProviderDashboard = () => {
     fetchDashboardData();
     fetchPackages();
     fetchServices();
-    fetchEnhancedAnalytics();
+    fetchProviderMetrics();
     // Notifications disabled on this dashboard
   }, []);
 
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/service-provider/dashboard-data');
+      
+      if (response.data.success) {
+        const data = response.data;
+        setServiceCount(data.serviceCount || 0);
+        setPackageCount(data.packageCount || 0);
+        setBookingCount(data.bookingCount || 0);
+        setPendingApprovals(data.pendingApprovals || 0);
+        setMonthlyRevenue(data.monthlyRevenue || 0);
+        setDashboardMetrics({
+          weeklyBookings: data.weeklyBookings || 0,
+          monthlyRevenue: data.monthlyRevenue || 0,
+          avgRating: data.avgRating || 0,
+          completionRate: data.completionRate || 0
+        });
+      }
+    } catch (err) {
+      setError('Failed to load dashboard data');
+      console.error('Dashboard data fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchProviderMetrics = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch appointments per day
+      const appointmentsResponse = await api.get('/service-provider/metrics/appointments-per-day');
+      if (appointmentsResponse.data.success) {
+        setAppointmentsPerDayData(appointmentsResponse.data.data || []);
+      }
+      
+      // Fetch service metrics
+      const serviceMetricsResponse = await api.get('/service-provider/metrics/service-status');
+      if (serviceMetricsResponse.data.success) {
+        const data = serviceMetricsResponse.data;
+        setActiveServicesCount(data.activeCount || 0);
+        setDeletedServicesCount(data.deletedCount || 0);
+        setServiceUpdateRequestsCount(data.updateRequestsCount || 0);
+        setDeleteRequestsCount(data.deleteRequestsCount || 0);
+      }
+      
+    } catch (err) {
+      setError('Failed to load provider metrics');
+      console.error('Provider metrics fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchPackages = async () => {
+    try {
+      const response = await api.get('/packages/provider-packages');
+      if (response.data.success) {
+        setPackages(response.data.packages || []);
+      }
+    } catch (err) {
+      console.error('Package fetch error:', err);
+    }
+  };
+  
+  const fetchServices = async () => {
+    try {
+      const response = await api.get('/services/my-services');
+      if (response.data.success) {
+        setServices(response.data.services || []);
+      }
+    } catch (err) {
+      console.error('Service fetch error:', err);
+    }
+  };
+  
+  const handleShowDescription = (title, description) => {
+    setDescriptionPanel({
+      open: true,
+      title,
+      description
+    });
+  };
+
+  const handleCloseDescription = () => {
+    setDescriptionPanel({
+      ...descriptionPanel,
+      open: false
+    });
+  };
 
   const loadNotifications = async () => {
     try {
@@ -152,7 +259,7 @@ const ServiceProviderDashboard = () => {
       
       console.log(`✅ Loaded ${notifications.length} notifications (${unread} unread)`);
     } catch (error) {
-      console.error('❌ Failed to load notifications:', error);
+      console.error('Failed to load notifications:', error);
     }
   };
   
@@ -182,136 +289,6 @@ const ServiceProviderDashboard = () => {
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
     }
-  };
-
-  const fetchEnhancedAnalytics = async () => {
-    try {
-      // Mock enhanced analytics data - replace with real API calls
-      
-      // Booking heatmap data (7 days x 24 hours)
-      const mockHeatmapData = Array.from({ length: 7 }, (_, dayIndex) => ({
-        day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayIndex],
-        values: Array.from({ length: 24 }, (_, hour) => {
-          // Simulate realistic booking patterns
-          let bookings = 0;
-          if (dayIndex >= 1 && dayIndex <= 5) { // Weekdays
-            if (hour >= 9 && hour <= 18) {
-              bookings = Math.floor(Math.random() * 8) + 1;
-            } else if (hour >= 19 && hour <= 21) {
-              bookings = Math.floor(Math.random() * 5) + 1;
-            }
-          } else { // Weekends
-            if (hour >= 10 && hour <= 20) {
-              bookings = Math.floor(Math.random() * 12) + 2;
-            }
-          }
-          return bookings;
-        })
-      }));
-      setHeatmapData(mockHeatmapData);
-
-      // Revenue data for the last 12 months
-      const mockRevenueData = Array.from({ length: 12 }, (_, i) => {
-        const date = new Date();
-        date.setMonth(date.getMonth() - (11 - i));
-        return {
-          name: date.toLocaleDateString('en-US', { month: 'short' }),
-          revenue: Math.floor(Math.random() * 50000) + 20000 + (i * 2000) // Growing trend
-        };
-      });
-      setRevenueData(mockRevenueData);
-
-      // Service performance data
-      const mockServicePerformance = [
-        { name: 'Hair Styling', bookings: 45, rating: 4.8, revenue: 180000 },
-        { name: 'Makeup', bookings: 32, rating: 4.6, revenue: 128000 },
-        { name: 'Manicure', bookings: 28, rating: 4.7, revenue: 84000 },
-        { name: 'Facial', bookings: 22, rating: 4.9, revenue: 110000 },
-        { name: 'Hair Color', bookings: 18, rating: 4.5, revenue: 144000 }
-      ];
-      setServicePerformanceData(mockServicePerformance);
-
-      // Dashboard metrics
-      setDashboardMetrics({
-        weeklyBookings: 23,
-        monthlyRevenue: 146000,
-        avgRating: 4.7,
-        completionRate: 94
-      });
-
-    } catch (error) {
-      console.error('Error fetching enhanced analytics:', error);
-    }
-  };
-
-  const fetchDashboardData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-
-      // Fetch services count (provider endpoint)
-      const servicesResponse = await api.get(
-        '/services/my-services'
-      );
-      if (servicesResponse.data.success) {
-        setServiceCount(servicesResponse.data.pagination?.totalServices || 0);
-      }
-
-      // Fetch bookings count (provider endpoint)
-      const bookingsResponse = await api.get(
-        '/bookings'  // adjust if you have a dedicated bookings endpoint
-      );
-      if (bookingsResponse.data.success) {
-        setBookingCount(bookingsResponse.data.bookings?.length || 0);
-      }
-
-      // Fetch pending approvals (provider-side count; you may need to add a custom provider route)
-      const approvalsResponse = await api.get(
-        '/services/my-services?status=pending_approval' // Filter by pending status
-      );
-      if (approvalsResponse.data.success) {
-        setPendingApprovals(approvalsResponse.data.pagination?.totalServices || 0);
-      }
-
-      // Fetch revenue data via relative URL
-      const revenueResponse = await api.get(
-        '/api/analytics/monthly-revenue',
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (revenueResponse.data.success) {
-        setMonthlyRevenue(revenueResponse.data.revenue || 0);
-      }
-    } catch {
-      // swallow all errors (403 etc)
-    }
-  };
-
-  const fetchPackages = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await api.get(
-        '/packages/provider'
-      );
-      
-      if (response.data.success) {
-        setPackages(response.data.data || []);
-        setPackageCount(response.data.data?.length || 0);
-      }
-    } catch {
-      // swallow
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchServices = async () => {
-    try {
-      const res = await api.get('/services/my-services');
-      if (res.data.success) {
-        // only approved by admin
-        setServices(res.data.data.filter(s => s.status === 'approved') || []);
-      }
-    } catch {}
   };
 
   const handlePackageSubmit = async () => {
@@ -462,7 +439,7 @@ const ServiceProviderDashboard = () => {
         onResignation={() => setResignationDialogOpen(true)}
       />
 
-      <Container component="main" sx={{ py: 3, bgcolor: '#FFFFFF' }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Clean Welcome Section */}
         <StudioCard sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
@@ -607,44 +584,110 @@ const ServiceProviderDashboard = () => {
             </Grid>
 
             {/* Clean Charts */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12}>
-                <BookingHeatmapChart 
-                  data={heatmapData} 
-                  title="Booking Utilization Heatmap"
-                  loading={loading}
-                />
+            <Grid container spacing={3}>
+              <Grid item xs={12} lg={7}>
+                <StudioCard sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" component="div" sx={{ color: '#003047' }}>
+                        Appointments Per Day
+                      </Typography>
+                      <IconButton size="small" onClick={() => handleShowDescription(
+                        "Appointments Per Day",
+                        "This chart shows the number of appointments booked for your services each day over the past month."
+                      )}>
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    {loading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                        <CircularProgress />
+                      </Box>
+                    ) : (
+                      <Box sx={{ height: 300 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={appointmentsPerDayData}
+                            margin={{
+                              top: 5,
+                              right: 30,
+                              left: 20,
+                              bottom: 5,
+                            }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="count" name="Appointments" stroke="#4CAF50" activeDot={{ r: 8 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    )}
+                  </CardContent>
+                </StudioCard>
               </Grid>
-
-              <Grid item xs={12} lg={8}>
-                <RevenueChart 
-                  data={revenueData}
-                  title="Monthly Revenue Trend"
-                  type="area"
-                  loading={loading}
-                />
-              </Grid>
-
-              <Grid item xs={12} lg={4}>
-                <ServicePerformanceChart 
-                  data={servicePerformanceData}
-                  title="Service Performance"
-                  type="pie"
-                  loading={loading}
-                />
+              
+              <Grid item xs={12} lg={5}>
+                <StudioCard sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" component="div" sx={{ color: '#003047' }}>
+                        Services Overview
+                      </Typography>
+                      <IconButton size="small" onClick={() => handleShowDescription(
+                        "Services Overview",
+                        "This chart shows the distribution of your services by status. It helps you visualize the proportion of active vs. deleted services."
+                      )}>
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    {loading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+                        <CircularProgress />
+                      </Box>
+                    ) : (
+                      <Box sx={{ height: 300 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Active', value: activeServicesCount, color: '#4CAF50' },
+                                { name: 'Deleted', value: deletedServicesCount, color: '#F44336' },
+                                { name: 'Pending Updates', value: serviceUpdateRequestsCount, color: '#FF9800' },
+                                { name: 'Pending Deletion', value: deleteRequestsCount, color: '#9C27B0' }
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={100}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {[
+                                { name: 'Active', color: '#4CAF50' },
+                                { name: 'Deleted', color: '#F44336' },
+                                { name: 'Pending Updates', color: '#FF9800' },
+                                { name: 'Pending Deletion', color: '#9C27B0' }
+                              ].map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    )}
+                  </CardContent>
+                </StudioCard>
               </Grid>
             </Grid>
+            
+            <Grid container spacing={3} sx={{ mb: 3 }}></Grid>
 
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12}>
-                <ServicePerformanceChart 
-                  data={servicePerformanceData}
-                  title="Detailed Service Analysis"
-                  type="bar"
-                  loading={loading}
-                />
-              </Grid>
-            </Grid>
+            <Grid container spacing={3} sx={{ mb: 3 }}></Grid>
           </>
         )}
 
@@ -884,3 +927,4 @@ const ServiceProviderDashboard = () => {
 };
 
 export default ServiceProviderDashboard;
+   
