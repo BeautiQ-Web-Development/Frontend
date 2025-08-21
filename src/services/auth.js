@@ -503,13 +503,23 @@ export const rejectServiceProvider = async (providerId, reason) => {
   }
 };
 
+// export const getUserCounts = async () => {
+//   const response = await api.get('/admin/dashboard-data');
+//   if (response.data.success) {
+//     // return the full payload so adminDashboardPage can read
+//     return response.data;
+//   }
+//   throw new Error(response.data.message || 'Failed to fetch dashboard data');
+// };
+
+// services/auth.js - FIXED VERSION
 export const getUserCounts = async () => {
-  try {
-    const response = await api.get('/auth/user-counts');
+  // ✅ FIXED: Use the correct route path that matches the backend
+  const response = await api.get('/auth/admin/dashboard-data');
+  if (response.data.success) {
     return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: error.message };
   }
+  throw new Error(response.data.message || 'Failed to fetch dashboard data');
 };
 
 export const getNotifications = async () => {
@@ -557,6 +567,245 @@ export const getUserRoleFromToken = () => {
     console.error('Failed to decode token:', error);
     return null;
   }
+};
+
+//services/auth.js - ADD THESE ENHANCED FUNCTIONS
+
+// Enhanced dashboard data fetching with detailed metrics
+export const getEnhancedDashboardData = async () => {
+  try {
+    console.log('📊 Fetching enhanced dashboard data...');
+    const response = await api.get('/auth/admin/dashboard-data');
+    
+    if (response.data.success) {
+      console.log('✅ Enhanced dashboard data received:', {
+        pendingServices: response.data.pendingServiceApprovals,
+        deletedServices: response.data.deletedServicesCount,
+        deleteRequests: response.data.deleteRequestsData,
+        newProviders: response.data.newProvidersData?.length || 0,
+        updateRequests: response.data.serviceUpdateRequests,
+        appointments: response.data.appointmentsPerDayData?.length || 0
+      });
+      
+      return response.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch enhanced dashboard data');
+  } catch (error) {
+    console.error('❌ Enhanced dashboard data fetch error:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Get pending service approvals with filtering
+export const getPendingServiceApprovals = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    Object.keys(filters).forEach(key => {
+      if (filters[key]) params.append(key, filters[key]);
+    });
+    
+    const response = await api.get(`/services/admin/pending?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error fetching pending service approvals:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Get service update requests
+export const getServiceUpdateRequests = async () => {
+  try {
+    const response = await api.get('/services/admin/pending');
+    if (response.data.success) {
+      // Filter only update requests
+      const updateRequests = response.data.pendingServices?.filter(
+        service => service.pendingChanges?.actionType === 'update'
+      ) || [];
+      
+      return {
+        success: true,
+        updateRequests,
+        count: updateRequests.length
+      };
+    }
+    throw new Error(response.data.message || 'Failed to fetch service update requests');
+  } catch (error) {
+    console.error('❌ Error fetching service update requests:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Get deleted services count and details
+export const getDeletedServices = async () => {
+  try {
+    const response = await api.get('/services/admin/all');
+    if (response.data.success) {
+      const deletedServices = response.data.services?.filter(
+        service => service.status === 'deleted'
+      ) || [];
+      
+      return {
+        success: true,
+        deletedServices,
+        count: deletedServices.length,
+        recentDeletes: deletedServices
+          .sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt))
+          .slice(0, 10)
+      };
+    }
+    throw new Error(response.data.message || 'Failed to fetch deleted services');
+  } catch (error) {
+    console.error('❌ Error fetching deleted services:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Get account deletion requests (reassign users)
+export const getAccountDeletionRequests = async () => {
+  try {
+    const [customerRequests, providerRequests] = await Promise.all([
+      api.get('/auth/customers/pending-updates'),
+      api.get('/auth/service-providers/pending-updates')
+    ]);
+    
+    const customerDeleteRequests = customerRequests.data.pendingUpdates?.filter(
+      update => update.requestType === 'delete'
+    ) || [];
+    
+    const providerDeleteRequests = providerRequests.data.pendingUpdates?.filter(
+      update => update.requestType === 'delete'
+    ) || [];
+    
+    return {
+      success: true,
+      customerDeleteRequests,
+      providerDeleteRequests,
+      totalRequests: customerDeleteRequests.length + providerDeleteRequests.length,
+      breakdown: {
+        customers: customerDeleteRequests.length,
+        serviceProviders: providerDeleteRequests.length
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error fetching account deletion requests:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Get new service provider registrations with trend data
+export const getNewServiceProviderTrend = async (days = 30) => {
+  try {
+    const response = await api.get('/auth/service-providers');
+    if (response.data.success) {
+      const providers = response.data.providers || [];
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      // Filter providers from last N days
+      const recentProviders = providers.filter(
+        provider => new Date(provider.createdAt) >= cutoffDate
+      );
+      
+      // Group by date
+      const trendData = {};
+      recentProviders.forEach(provider => {
+        const date = new Date(provider.createdAt).toISOString().split('T')[0];
+        trendData[date] = (trendData[date] || 0) + 1;
+      });
+      
+      // Convert to array format for charts
+      const chartData = Object.keys(trendData)
+        .sort()
+        .map(date => ({
+          date,
+          count: trendData[date]
+        }));
+      
+      return {
+        success: true,
+        trendData: chartData,
+        totalNewProviders: recentProviders.length,
+        recentProviders: recentProviders.slice(0, 10)
+      };
+    }
+    throw new Error(response.data.message || 'Failed to fetch service provider trend');
+  } catch (error) {
+    console.error('❌ Error fetching service provider trend:', error);
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+// Get appointments data for dashboard
+export const getAppointmentsDashboardData = async (days = 30) => {
+  try {
+    // This would require a booking endpoint - placeholder for now
+    const response = await api.get(`/bookings/admin/dashboard?days=${days}`);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error fetching appointments data:', error);
+    // Return mock data if booking endpoint doesn't exist yet
+    return {
+      success: true,
+      appointmentsPerDay: [],
+      totalAppointments: 0,
+      pendingAppointments: 0,
+      completedAppointments: 0
+    };
+  }
+};
+
+// Dashboard real-time updates
+export const subscribeToRealTimeUpdates = (callback) => {
+  // This would implement WebSocket or Server-Sent Events for real-time updates
+  console.log('📡 Setting up real-time dashboard updates...');
+  
+  // For now, return a cleanup function
+  return () => {
+    console.log('🔌 Cleaning up real-time dashboard subscription');
+  };
+};
+
+// Dashboard data validation and error recovery
+export const validateDashboardData = (data) => {
+  const validatedData = {
+    customerCount: Number(data.customerCount) || 0,
+    serviceProviderCount: Number(data.serviceProviderCount) || 0,
+    pendingApprovalCount: Number(data.pendingApprovalCount) || 0,
+    totalUsers: Number(data.totalUsers) || 0,
+    pendingServiceApprovals: Number(data.pendingServiceApprovals) || 0,
+    deletedServicesCount: Number(data.deletedServicesCount) || 0,
+    deleteRequestsData: {
+      customers: Number(data.deleteRequestsData?.customers) || 0,
+      serviceProviders: Number(data.deleteRequestsData?.serviceProviders) || 0
+    },
+    newProvidersData: Array.isArray(data.newProvidersData) ? data.newProvidersData : [],
+    serviceUpdateRequestsData: Array.isArray(data.serviceUpdateRequestsData) ? data.serviceUpdateRequestsData : [],
+    serviceUpdateRequests: Number(data.serviceUpdateRequests) || 0,
+    appointmentsPerDayData: Array.isArray(data.appointmentsPerDayData) ? data.appointmentsPerDayData : [],
+    additionalMetrics: data.additionalMetrics || {},
+    summary: data.summary || {}
+  };
+  
+  console.log('✅ Dashboard data validated:', {
+    hasValidCounts: validatedData.totalUsers > 0,
+    hasChartData: validatedData.newProvidersData.length > 0,
+    hasMetrics: Object.keys(validatedData.additionalMetrics).length > 0
+  });
+  
+  return validatedData;
+};
+
+// Export enhanced dashboard utilities
+export const dashboardUtils = {
+  getEnhancedDashboardData,
+  getPendingServiceApprovals,
+  getServiceUpdateRequests,
+  getDeletedServices,
+  getAccountDeletionRequests,
+  getNewServiceProviderTrend,
+  getAppointmentsDashboardData,
+  subscribeToRealTimeUpdates,
+  validateDashboardData
 };
 
 // expose service helpers on the axios instance
