@@ -8,7 +8,6 @@ import {
   Alert,
   CircularProgress,
   Button,
-  Paper,
   Card,
   CardContent,
   Avatar,
@@ -20,24 +19,19 @@ import {
   Chip
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
   People as PeopleIcon,
-  Store as StoreIcon,
-  Notifications as NotificationsIcon,
-  Dashboard as DashboardIcon,
   Info as InfoIcon,
   Refresh as RefreshIcon,
   TrendingUp as TrendingUpIcon,
-  Assignment as AssignmentIcon,
-  Delete as DeleteIcon,
   Update as UpdateIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell
+  BarChart, Bar
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/AdminSidebar';
 import Footer from '../../components/footer';
@@ -216,6 +210,7 @@ const SummaryCard = styled(Card)(({ theme }) => ({
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
+  const { notifications } = useNotifications();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -246,9 +241,6 @@ const AdminDashboard = () => {
     title: '',
     description: ''
   });
-  
-  const [notifications, setNotifications] = useState(0);
-  const [notificationsList, setNotificationsList] = useState([]);
 
   // Fetch dashboard data
   const fetchDashboardData = async (showRefreshing = false) => {
@@ -322,6 +314,9 @@ const AdminDashboard = () => {
     logout();
     navigate('/admin-login');
   };
+  
+  // These functions aren't needed anymore since we're using EnhancedAppBar
+  // But we'll keep them as reference in case we need to implement custom notification behavior later
 
   const toggleSidebar = () => setSidebarOpen(o => !o);
 
@@ -332,9 +327,6 @@ const AdminDashboard = () => {
     if (value >= thresholds.warning) return 'warning';
     return 'success';
   };
-
-  // Chart colors
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   if (loading && !refreshing) {
     return (
@@ -353,8 +345,8 @@ const AdminDashboard = () => {
         onMenuClick={toggleSidebar}
         onLogout={handleLogout}
         title="Admin Dashboard"
-        notifications={notificationsList.length}
-        notificationsList={notificationsList}
+        notifications={notifications?.length || 0}
+        notificationsList={notifications || []}
       />
 
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
