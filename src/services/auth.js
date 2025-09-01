@@ -470,13 +470,68 @@ export const approveProviderUpdate = async (providerId) => {
 // Reject a service provider's update or deletion request
 export const rejectProviderUpdate = async (providerId, rejectionReason) => {
   try {
-    const response = await api.put(
-      `/auth/admin/reject-service-provider-update/${providerId}`,
-      { rejectionReason }
-    );
-    return response.data;
+    console.log('🔄 Rejecting provider update with data:', { providerId, rejectionReason });
+    
+    // Validate input parameters
+    if (!providerId) {
+      throw new Error('Provider ID is required');
+    }
+    
+    if (!rejectionReason || rejectionReason.trim() === '') {
+      throw new Error('Rejection reason is required and cannot be empty');
+    }
+    
+    // Clean the rejection reason
+    const trimmedReason = rejectionReason.trim();
+    
+    // First, check if this provider has pending updates
+    try {
+      const checkResponse = await api.get('/auth/service-providers/pending-updates');
+      const pendingUpdates = checkResponse.data?.pendingUpdates || [];
+      
+      // Find if this provider has pending updates
+      const providerWithPendingUpdates = pendingUpdates.find(p => p._id === providerId);
+      
+      if (!providerWithPendingUpdates) {
+        console.log('❌ No pending updates found for provider:', providerId);
+        throw new Error('This provider has no pending updates to reject');
+      }
+      
+      console.log('✅ Found pending updates for provider:', {
+        providerId,
+        updateType: providerWithPendingUpdates.pendingUpdates?.deleteRequested ? 'deletion' : 'update'
+      });
+      
+      // Proceed with rejection now that we've confirmed there are pending updates
+      const response = await api.put(
+        `/auth/admin/reject-service-provider-update/${providerId}`,
+        { rejectionReason: trimmedReason }
+      );
+      
+      console.log('✅ Provider update rejection response:', response.data);
+      return response.data;
+    } catch (apiError) {
+      // Provide more specific error messages based on API response
+      if (apiError.response?.status === 400) {
+        if (apiError.response.data?.message?.includes('pending updates')) {
+          throw new Error('This provider has no pending updates to reject');
+        } else {
+          throw new Error(`Validation error: ${apiError.response.data?.message || 'Invalid request'}`);
+        }
+      } else if (apiError.response?.status === 404) {
+        throw new Error('Provider not found. They may have been deleted or deactivated.');
+      } else if (apiError.response?.status === 403) {
+        throw new Error('You do not have permission to reject this provider update.');
+      } else if (apiError.message && !apiError.response) {
+        // This is from our own validation
+        throw apiError;
+      }
+      
+      // Rethrow with original response
+      throw apiError;
+    }
   } catch (error) {
-    console.error('Error rejecting provider update:', error);
+    console.error('❌ Error rejecting provider update:', error);
     throw error.response?.data || { message: error.message };
   }
 };
@@ -492,14 +547,83 @@ export const approveServiceProvider = async (providerId) => {
 // Reject a service provider registration request
 export const rejectServiceProvider = async (providerId, reason) => {
   try {
+    console.log('🔄 Rejecting service provider registration:', { providerId, reason });
+    
+    if (!providerId) {
+      throw new Error('Provider ID is required');
+    }
+    
+    if (!reason || reason.trim() === '') {
+      throw new Error('Rejection reason is required');
+    }
+    
     const response = await api.put(
       `/auth/reject-provider/${providerId}`,
-      { reason }
+      { reason: reason.trim() }
     );
+    
+    console.log('✅ Provider registration rejection response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error rejecting service provider:', error);
+    console.error('❌ Error rejecting service provider registration:', error);
     throw error.response?.data || { message: error.message };
+  }
+};
+
+// Utility function to determine what kind of rejection to use
+export const rejectProvider = async (providerId, reason, isNewRegistration = false) => {
+  try {
+    console.log('🔄 Smart provider rejection:', { 
+      providerId, 
+      reason, 
+      isNewRegistration 
+    });
+    
+    if (!providerId) {
+      throw new Error('Provider ID is required');
+    }
+    
+    if (!reason || reason.trim() === '') {
+      throw new Error('Rejection reason is required and cannot be empty');
+    }
+    
+    let response;
+    if (isNewRegistration) {
+      // This is a new provider registration rejection
+      console.log('👉 Using rejectServiceProvider for new registration rejection');
+      response = await rejectServiceProvider(providerId, reason);
+    } else {
+      // This is an existing provider update/deletion request rejection
+      console.log('👉 Using rejectProviderUpdate for update/deletion rejection');
+      response = await rejectProviderUpdate(providerId, reason);
+    }
+    
+    console.log('✅ Provider rejection successful:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Smart provider rejection error:', error);
+    
+    // Format error for frontend display
+    if (error.response) {
+      console.log('Server response error:', {
+        status: error.response.status,
+        data: error.response.data
+      });
+      
+      // Return a more specific error message based on status code
+      if (error.response.status === 400) {
+        throw new Error(`Validation error: ${error.response.data?.message || 'Bad request'}`);
+      } else if (error.response.status === 404) {
+        throw new Error('Provider not found. They may have been deleted already.');
+      } else if (error.response.status === 403) {
+        throw new Error('You do not have permission to perform this action.');
+      } else {
+        throw new Error(error.response.data?.message || 'Server error occurred');
+      }
+    }
+    
+    // For client-side validation errors or network errors
+    throw error;
   }
 };
 

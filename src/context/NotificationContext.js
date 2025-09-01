@@ -432,20 +432,22 @@ const getNotifications = useCallback(async (forceRefresh = false) => {
     }
   }, [user, persistedUser, getNotifications]);
 
-  // Clear data on logout
+  // Handle socket cleanup on logout but keep notifications history
   useEffect(() => {
     if (isLoggedIn === false) {
-      console.log('NotificationContext - User logged out, clearing data');
-      clearPersistedData();
+      console.log('NotificationContext - User logged out');
       
-      // Cleanup socket connection on logout
+      // DON'T clear the notifications - we want to keep them
+      // clearPersistedData(); 
+      
+      // Only clean up socket connection on logout
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
         console.log('NotificationContext - Disconnected socket on logout');
       }
     }
-  }, [isLoggedIn, clearPersistedData]);
+  }, [isLoggedIn]);
   
   // Cleanup timeouts and socket on unmount
   useEffect(() => {

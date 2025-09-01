@@ -45,30 +45,30 @@ const AdminSidebar = ({ open, onClose, user }) => {
       path: '/admin/service-management',
       description: 'Manage service provider registrations and packages'
     },
-    {
-      text: 'Appointments',
-      icon: <AnalyticsIcon />,
-      path: '/admin/appointments',
-      description: 'View all platform-wide bookings'
-    },
-    {
-      text: 'Rent & Payments',
-      icon: <ReportsIcon />,
-      path: '/admin/rent-payments',
-      description: 'Track provider rent payments'
-    },
-    {
-      text: 'Settings',
-      icon: <SettingsIcon />,
-      path: '/admin/settings',
-      description: 'Configure platform policies'
-    },
-    {
-      text: 'Analytics',
-      icon: <SecurityIcon />,
-      path: '/admin/analytics',
-      description: 'System-wide usage and trends'
-    },
+    // {
+    //   text: 'Appointments',
+    //   icon: <AnalyticsIcon />,
+    //   path: '/admin/appointments',
+    //   description: 'View all platform-wide bookings'
+    // },
+    // {
+    //   text: 'Rent & Payments',
+    //   icon: <ReportsIcon />,
+    //   path: '/admin/rent-payments',
+    //   description: 'Track provider rent payments'
+    // },
+    // {
+    //   text: 'Settings',
+    //   icon: <SettingsIcon />,
+    //   path: '/admin/settings',
+    //   description: 'Configure platform policies'
+    // },
+    // {
+    //   text: 'Analytics',
+    //   icon: <SecurityIcon />,
+    //   path: '/admin/analytics',
+    //   description: 'System-wide usage and trends'
+    // },
     {
       text: 'Notifications',
       icon: <NotificationsIcon />,

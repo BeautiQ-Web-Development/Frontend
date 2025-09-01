@@ -11,8 +11,10 @@ import {
   Divider,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Button
 } from '@mui/material';
+import { useAuth } from '../context/AuthContext';
 import {
   Dashboard as DashboardIcon,
   Event as AppointmentsIcon,
@@ -32,6 +34,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const CustomerSidebar = ({ open, onClose, user }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // Enhanced menu items with better descriptions
   const menuItems = [
@@ -48,17 +51,17 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       description: 'Find beauty services'
     },
     {
-      text: 'Bookings',
+      text: 'My Bookings',
       path: '/customer/my-bookings',
       icon: <AppointmentsIcon />,
       description: 'Upcoming appointments'
     },
-    {
-      text: 'History',
-      path: '/customer/appointment-history',
-      icon: <HistoryIcon />,
-      description: 'Past appointments'
-    },
+    // {
+    //   text: 'History',
+    //   path: '/customer/appointment-history',
+    //   icon: <HistoryIcon />,
+    //   description: 'Past appointments'
+    // },
     {
       text: 'Profile Settings',
       path: '/profile-settings',
@@ -148,11 +151,43 @@ const CustomerSidebar = ({ open, onClose, user }) => {
             <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><DashboardIcon/></ListItemIcon>
             <ListItemText 
               primary="Dashboard" 
-              secondary="Overview: Services available & completed appointments" 
+              secondary="Overview: Services available & appointments" 
               primaryTypographyProps={{ fontWeight: location.pathname === '/customer-dashboard' ? 700 : 400 }}
             />
           </ListItemButton>
         </ListItem>
+        
+        {/* Browse Services */}
+        {/* <ListItem disablePadding>
+          <ListItemButton 
+            onClick={() => handleNavigation('/customer/browse-services')} 
+            selected={location.pathname === '/customer/browse-services'}
+            sx={{
+              '&.Mui-selected': {
+                bgcolor: '#E6F7F8',
+                '&:hover': {
+                  bgcolor: '#E6F7F8',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: 4,
+                  bgcolor: '#003047',
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><SearchIcon/></ListItemIcon>
+            <ListItemText 
+              primary="Browse Services" 
+              secondary="Find and book beauty services" 
+              primaryTypographyProps={{ fontWeight: location.pathname === '/customer/browse-services' ? 700 : 400 }}
+            />
+          </ListItemButton>
+        </ListItem> */}
 
         {/* collapsible My Activities */}
         <Accordion disableGutters elevation={0} sx={{ '& .MuiAccordionSummary-root': { px: 2, py: 0 } }}>
@@ -160,7 +195,7 @@ const CustomerSidebar = ({ open, onClose, user }) => {
             <Typography sx={{ color: '#003047', fontWeight: 'bold' }}>My Activities</Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ p: 0 }}>
-            {menuItems.filter(i => ['Bookings','History'].includes(i.text)).map((item) => (
+            {menuItems.filter(i => ['My Bookings','History'].includes(i.text)).map((item) => (
               <ListItem key={item.text} disablePadding>
                 <ListItemButton 
                   onClick={() => handleNavigation(item.path)} 
@@ -301,6 +336,27 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       </List>
       
       <Divider sx={{ mx: 2, borderColor: '#003047' }} />
+      
+      {/* <Box sx={{ p: 2, mt: 2 }}>
+        <Button
+          fullWidth
+          variant="contained"
+          color="primary"
+          onClick={() => {
+            logout();
+            navigate('/login');
+            onClose();
+          }}
+          sx={{
+            backgroundColor: '#001F3F',
+            '&:hover': { backgroundColor: '#003366' },
+            mb: 2
+          }}
+        >
+          Logout
+        </Button>
+      </Box>
+       */}
       <Box sx={{ p: 2, mt: 'auto' }}>
         <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Customer Portal
