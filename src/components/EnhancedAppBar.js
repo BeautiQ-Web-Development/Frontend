@@ -72,7 +72,28 @@ const EnhancedAppBar = ({
   const handleNotifClick = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-    const handleNotificationClickItem = (notification) => {
+    const handleNotificationClickItem = async (notification) => {
+    // Mark the notification as read first
+    try {
+      // Import the notification service function if available in your component
+      const { markAsRead } = await import('../services/notification');
+      
+      if (notification && notification._id && !notification.read) {
+        await markAsRead(notification._id);
+        
+        // Update the notification in the list
+        const updatedNotificationsList = notificationsList.map(n => 
+          n._id === notification._id ? { ...n, read: true } : n
+        );
+        
+        // We don't update state directly as that would cause the component to re-render
+        // Instead, we rely on the parent component to pass the updated notifications list on next render
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+    
+    // Navigate based on role
     if (role === 'admin') {
       // Navigate to notifications page with the specific notification
       navigate('/admin/notifications', { 
@@ -82,9 +103,11 @@ const EnhancedAppBar = ({
         } 
       });
     } else if (role === 'serviceProvider') {
-      // Handle service provider notifications
-      navigate('/service-provider/notifications');
-      } else if (role === 'customer') {
+      // Navigate to provider notifications with selected notification
+      navigate('/service-provider/notifications', { 
+        state: { selectedNotification: notification, fromAppBar: true } 
+      });
+    } else if (role === 'customer') {
         navigate('/customer/notifications', { state: { selectedNotification: notification } });
     }
     handleClose();
@@ -147,9 +170,18 @@ const EnhancedAppBar = ({
         {/* right side: notifications + logout */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton color="inherit" onClick={handleNotifClick}>
-            <Badge badgeContent={notifications} color="error">
+            {Array.isArray(notificationsList) && 
+             notificationsList.filter(n => n.type !== 'newServiceProvider' && !n.read).length > 0 ? (
+              <Badge badgeContent={
+                // Filter out service provider notifications and read notifications from count
+                notificationsList.filter(n => n.type !== 'newServiceProvider' && !n.read).length
+              } color="error">
+                <NotificationsIcon sx={{ color: '#FFFFFF' }} />
+              </Badge>
+            ) : (
+              // No badge when count is 0
               <NotificationsIcon sx={{ color: '#FFFFFF' }} />
-            </Badge>
+            )}
           </IconButton>
           
           <Menu 
@@ -161,8 +193,11 @@ const EnhancedAppBar = ({
             }}
           >
             {notificationsList.length > 0 ? [
-                // Map through notifications (returns an array of MenuItems)
-                ...notificationsList.slice(0, 5).map((notification, index) => (
+                // Map through notifications (returns an array of MenuItems), filtering out service provider registration notifications
+                ...notificationsList
+                  .filter(n => n.type !== 'newServiceProvider') // Filter out service provider notifications
+                  .slice(0, 5)
+                  .map((notification, index) => (
                   <MenuItem 
                     key={notification.id || notification._id || index} 
                     onClick={() => handleNotificationClickItem(notification)}
@@ -170,13 +205,17 @@ const EnhancedAppBar = ({
                       whiteSpace: 'normal',
                       py: 1.5,
                       borderBottom: '1px solid rgba(0,0,0,0.1)',
-                      '&:hover': { bgcolor: 'rgba(0, 31, 63, 0.05)' }
+                      backgroundColor: notification.read ? 'transparent' : 'rgba(0, 31, 63, 0.05)',
+                      '&:hover': { bgcolor: 'rgba(0, 31, 63, 0.1)' }
                     }}
                   >
                     <Box>
                       <Typography variant="body2" fontWeight="bold">
                         {notification.type === 'providerUnavailable' ? 'Service Provider Unavailable' :
                          notification.type === 'serviceUnavailable' ? 'Service Unavailable' :
+                         notification.type === 'newCustomer' ? 'New Customer Registration' :
+                         notification.type === 'newServiceProvider' ? 'New Service Provider Registration' :
+                         notification.type === 'serviceRequest' ? 'New Service Request' :
                          'New Notification'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -200,7 +239,7 @@ const EnhancedAppBar = ({
                     borderTop: '1px solid rgba(0,0,0,0.1)'
                   }}
                 >
-                  View All Notifications ({notifications})
+                  View All Notifications {notifications > 0 ? `(${notifications})` : ''}
                 </MenuItem>
             ] : (
               <MenuItem onClick={handleClose} sx={{ textAlign: 'center' }}>

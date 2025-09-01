@@ -371,6 +371,20 @@ export const getServiceStatusInfo = (service) => {
   };
 };
 
+// Fetch platform stats (customers, providers, services)
+export const getStats = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/services/stats`);
+    if (response.data.success) {
+      return response.data.data;
+    }
+    throw new Error('Failed to fetch stats');
+  } catch (error) {
+    console.error('Error fetching stats API:', error);
+    throw error;
+  }
+};
+
 // Export debug function for manual testing
 export { debugToken };
 
@@ -380,5 +394,6 @@ export default {
   adminPackagesAPI,
   validateServiceData,
   getServiceStatusInfo,
-  debugToken
+  debugToken,
+  getStats
 };

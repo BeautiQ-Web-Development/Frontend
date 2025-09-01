@@ -31,7 +31,9 @@ import {
   DialogActions,
   Divider,
   CircularProgress,
-  Slide
+  Slide,
+  Modal,
+  Backdrop
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -55,13 +57,21 @@ import {
   Home as HomeIcon,
   Business as BusinessAddressIcon,
   Photo as PhotoIcon,
-  Block as BlockIcon
+  Block as BlockIcon,
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/footer';
 import AdminSidebar from '../../components/AdminSidebar';
-import api, { approveServiceProvider, rejectServiceProvider, approveProviderUpdate, rejectProviderUpdate } from '../../services/auth';
+import api, { 
+  approveServiceProvider, 
+  rejectServiceProvider, 
+  approveProviderUpdate, 
+  rejectProviderUpdate,
+  rejectProvider  // Add our new smart function
+} from '../../services/auth';
 import { styled } from '@mui/material/styles';
 import { adminServicesAPI } from '../../services/services';
 
@@ -140,6 +150,34 @@ const ServiceManagementAdmin = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
+  // Helper function to check if provider has pending updates
+  const hasProviderPendingChanges = (provider) => {
+    if (!provider) return false;
+    
+    // Check for pending approval (new registration)
+    if (provider.approvalStatus === 'pending') {
+      return true;
+    }
+    
+    // Check for pending updates (profile changes or deletion request)
+    return provider.pendingUpdates && provider.pendingUpdates.status === 'pending';
+  };
+  
+  // Helper function to get the type of pending changes
+  const getProviderPendingChangeType = (provider) => {
+    if (!provider) return 'none';
+    
+    if (provider.approvalStatus === 'pending') {
+      return 'registration';
+    }
+    
+    if (provider.pendingUpdates?.status === 'pending') {
+      return provider.pendingUpdates.deleteRequested ? 'deletion' : 'update';
+    }
+    
+    return 'none';
+  };
+  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
   const [providerSubTab, setProviderSubTab] = useState(0);
@@ -165,6 +203,13 @@ const ServiceManagementAdmin = () => {
 
   // CRITICAL: Add processing state to prevent duplicate actions
   const [processingActions, setProcessingActions] = useState(new Set());
+  
+  // Add state for image preview modal
+  const [imagePreview, setImagePreview] = useState({
+    open: false,
+    imageUrl: '',
+    title: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -175,20 +220,44 @@ const ServiceManagementAdmin = () => {
       setLoading(true);
       console.log('🔄 Fetching admin data...');
       
-      const [providersRes, servicesRes, pendingServicesRes] = await Promise.all([
+      const [providersRes, servicesRes, pendingServicesRes, pendingProviderUpdatesRes] = await Promise.all([
         api.get('/auth/service-providers'),
         adminServicesAPI.getAllServices(),
-        adminServicesAPI.getPendingServices()
+        adminServicesAPI.getPendingServices(),
+        api.get('/auth/service-providers/pending-updates') // Get providers with pending updates
       ]);
 
       console.log('📊 Data received:', {
         providers: providersRes.data.providers?.length || 0,
         services: servicesRes.services?.length || 0,
-        pending: pendingServicesRes.pendingServices?.length || 0
+        pendingServices: pendingServicesRes.pendingServices?.length || 0,
+        pendingProviderUpdates: pendingProviderUpdatesRes.data.pendingUpdates?.length || 0
       });
 
       if (providersRes.data.success) {
-        setServiceProviders(providersRes.data.providers || []);
+        // Get all providers
+        const allProviders = providersRes.data.providers || [];
+        
+        // Get providers with pending updates 
+        const providersWithPendingUpdates = pendingProviderUpdatesRes.data.pendingUpdates || [];
+        
+        console.log('👥 Providers with pending updates:', providersWithPendingUpdates.length);
+        
+        // Combine providers data
+        const combinedProviders = [...allProviders];
+        
+        // Update provider information with pending update status
+        providersWithPendingUpdates.forEach(pendingProvider => {
+          const index = combinedProviders.findIndex(p => p._id === pendingProvider._id);
+          if (index !== -1) {
+            combinedProviders[index] = {
+              ...combinedProviders[index],
+              pendingUpdates: pendingProvider.pendingUpdates
+            };
+          }
+        });
+        
+        setServiceProviders(combinedProviders);
       }
       
       if (servicesRes.success) {
@@ -278,9 +347,49 @@ const ServiceManagementAdmin = () => {
 
   // ENHANCED: Open reject dialog with item data
   const handleOpenRejectDialog = (id, itemType) => {
+    // Find the item we're attempting to reject
     const itemData = itemType === 'service' 
       ? services.find(s => s._id === id)
       : serviceProviders.find(p => p._id === id);
+    
+    // For providers, check if there are pending updates before allowing rejection
+    if (itemType === 'provider') {
+      const provider = itemData;
+      
+      // Use our helper function to check for pending changes
+      if (!hasProviderPendingChanges(provider)) {
+        console.log('❌ Cannot reject provider - no pending updates or approvals', {
+          providerId: id,
+          businessName: provider?.businessName || provider?.fullName,
+          approvalStatus: provider?.approvalStatus,
+          hasPendingUpdates: !!provider?.pendingUpdates,
+          pendingStatus: provider?.pendingUpdates?.status
+        });
+        
+        // Show error message with more details
+        setError(`Cannot reject ${provider?.businessName || provider?.fullName} - there are no pending updates or approval requests to reject.`);
+        
+        // Scroll to the error message
+        setTimeout(() => {
+          document.querySelector('.MuiAlert-root')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        
+        return;
+      }
+      
+      // Get the type of pending changes
+      const pendingChangeType = getProviderPendingChangeType(provider);
+      const isPendingApproval = pendingChangeType === 'registration';
+      const hasPendingUpdates = pendingChangeType === 'update' || pendingChangeType === 'deletion';
+      
+      console.log('🔍 Opening reject dialog for provider:', {
+        providerId: id,
+        pendingChangeType,
+        isPendingApproval,
+        hasPendingUpdates,
+        businessName: provider?.businessName || provider?.fullName
+      });
+    }
     
     setRejectDialog({ 
       open: true, 
@@ -293,12 +402,21 @@ const ServiceManagementAdmin = () => {
 
   // ENHANCED: Handle rejection with comprehensive state updates
   const handleRejectWithReason = async () => {
-    if (!rejectReason.trim() || rejectReason.length < 10) {
+    const trimmedReason = rejectReason.trim();
+    
+    if (!trimmedReason || trimmedReason.length < 10) {
       setError('Please provide a detailed reason for rejection (at least 10 characters)');
       return;
     }
 
     const { serviceId: rId, type: rejectType } = rejectDialog;
+    
+    if (!rId) {
+      setError('Missing ID for the item to reject');
+      console.error('❌ Missing ID in rejection dialog:', rejectDialog);
+      return;
+    }
+    
     const actionKey = `${rId}_reject`;
     
     // Prevent duplicate processing
@@ -311,15 +429,39 @@ const ServiceManagementAdmin = () => {
     setRejectionLoading(true);
 
     try {
-      console.log(`🔄 Rejecting ${rejectType} ${rId} with reason: "${rejectReason.trim()}"`);
+      console.log(`🔄 Rejecting ${rejectType} ${rId} with reason:`, trimmedReason);
       
       if (rejectType === 'provider') {
-        // Reject pending provider profile update or deletion request
-        await rejectProviderUpdate(rId, rejectReason.trim());
+        // Find the provider to verify it has pending changes
+        const provider = serviceProviders.find(p => p._id === rId);
+        
+        if (!provider) {
+          throw new Error(`Provider with ID ${rId} not found`);
+        }
+        
+        if (!hasProviderPendingChanges(provider)) {
+          throw new Error(`No pending updates found for provider ${provider.businessName || provider.fullName}`);
+        }
+        
+        // Determine if this is a new registration rejection or an update rejection
+        const isNewRegistration = provider.approvalStatus === 'pending';
+        
+        // Use our smart rejection function that handles both types of rejections
+        console.log('Calling smart rejectProvider with params:', { 
+          providerId: rId, 
+          reason: trimmedReason,
+          isNewRegistration,
+          approvalStatus: provider.approvalStatus,
+          hasPendingUpdates: !!provider.pendingUpdates,
+          pendingStatus: provider.pendingUpdates?.status,
+          deleteRequested: provider.pendingUpdates?.deleteRequested
+        });
+        
+        await rejectProvider(rId, trimmedReason, isNewRegistration);
       }
       else if (rejectType === 'service') {
         // use service wrapper to call POST /services/admin/:id/reject
-        await adminServicesAPI.rejectService(rId, rejectReason.trim());
+        await adminServicesAPI.rejectService(rId, trimmedReason);
       }
 
       // CRITICAL: Update local state immediately with optimistic updates
@@ -368,7 +510,30 @@ const ServiceManagementAdmin = () => {
       console.log(`✅ ${rejectType} rejected successfully`);
     } catch (error) {
       console.error(`❌ Error rejecting ${rejectType}:`, error);
-      setError(`Failed to reject: ${error.response?.data?.message || error.message}`);
+      
+      // Provide detailed error message for better debugging
+      const errorResponse = error.response?.data;
+      const statusCode = error.response?.status;
+      const errorMessage = errorResponse?.message || error.message;
+      
+      console.log('Rejection error details:', {
+        statusCode,
+        errorMessage,
+        errorData: errorResponse,
+        itemId: rId,
+        rejectType
+      });
+      
+      // Provide user-friendly error message based on status code
+      if (statusCode === 400) {
+        setError(`Validation error: ${errorMessage}`);
+      } else if (statusCode === 403) {
+        setError('You don\'t have permission to perform this action');
+      } else if (statusCode === 404) {
+        setError(`The ${rejectType} could not be found. It may have been deleted or already processed.`);
+      } else {
+        setError(`Failed to reject: ${errorMessage}`);
+      }
     } finally {
       setRejectionLoading(false);
       setProcessingActions(prev => {
@@ -489,22 +654,62 @@ const ServiceManagementAdmin = () => {
     fetchData();
   };
 
-  // Helper function to display image with proper error handling
+  // Helper function to display image with proper error handling and preview functionality
   const renderImage = (imagePath, altText) => {
     if (!imagePath) return null;
     
     let imageUrl;
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      imageUrl = imagePath;
+      // Check if it's a placeholder URL and use our local placeholder instead
+      if (imagePath.includes('via.placeholder.com')) {
+        // Extract dimensions and text from the URL
+        const urlParts = imagePath.split('/');
+        const dimensions = urlParts[urlParts.length - 1].split('?')[0];
+        const text = (imagePath.includes('?text=') ? 
+          imagePath.split('?text=')[1] : 'No+Image');
+        
+        // Use our local placeholder service
+        imageUrl = `${baseUrl}/placeholder/${dimensions}?text=${text}`;
+      } else {
+        imageUrl = imagePath;
+      }
     } else if (imagePath.startsWith('uploads/')) {
-      imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${imagePath}`;
+      // Path already has uploads prefix
+      imageUrl = `${baseUrl}/${imagePath}`;
+    } else if (imagePath.includes('/')) {
+      // Might be a subfolder path, use as is
+      imageUrl = `${baseUrl}/uploads/${imagePath}`;
     } else {
-      imageUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/uploads/serviceProviders/${imagePath}`;
+      // Just a filename, try in uploads folder
+      imageUrl = `${baseUrl}/uploads/${imagePath}`;
     }
     
+    // Function to open image in a larger preview modal
+    const handleImageClick = () => {
+      setImagePreview({
+        open: true,
+        imageUrl: imageUrl,
+        title: altText
+      });
+    };
+    
     return (
-      <Card sx={{ maxWidth: 200, mb: 2, border: '1px solid #ddd' }}>
+      <Card 
+        sx={{ 
+          maxWidth: 200, 
+          mb: 2, 
+          border: '1px solid #ddd',
+          cursor: 'pointer',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          '&:hover': {
+            transform: 'scale(1.02)',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+          }
+        }}
+        onClick={handleImageClick}
+      >
         <Box sx={{ position: 'relative', height: 150, overflow: 'hidden' }}>
           <img
             src={imageUrl}
@@ -519,6 +724,39 @@ const ServiceManagementAdmin = () => {
               e.target.style.border = '2px solid #4caf50';
             }}
             onError={(e) => {
+              // Try alternative URL before showing error
+              const originalUrl = e.target.src;
+              const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+              let alternativeUrl;
+              
+              // If URL has api/uploads, try without api
+              if (originalUrl.includes('/api/uploads/')) {
+                alternativeUrl = originalUrl.replace('/api/uploads/', '/uploads/');
+                e.target.src = alternativeUrl;
+                return; // Give it a chance to load
+              }
+              // If URL has uploads/serviceProviders, try just uploads
+              else if (originalUrl.includes('/uploads/serviceProviders/')) {
+                const filename = originalUrl.split('/').pop();
+                alternativeUrl = `${baseUrl}/uploads/${filename}`;
+                e.target.src = alternativeUrl;
+                return; // Give it a chance to load
+              }
+              // If URL is from via.placeholder.com, use our local placeholder
+              else if (originalUrl.includes('via.placeholder.com')) {
+                // Extract dimensions and text
+                const urlParts = originalUrl.split('/');
+                const dimensionsPart = urlParts[urlParts.length - 1];
+                const dimensions = dimensionsPart.split('?')[0] || '300x140';
+                const text = originalUrl.includes('?text=') ? 
+                  originalUrl.split('?text=')[1] : 'No+Image';
+                
+                alternativeUrl = `${baseUrl}/placeholder/${dimensions}?text=${text}`;
+                e.target.src = alternativeUrl;
+                return;
+              }
+              
+              // If we get here, show the error placeholder
               e.target.style.display = 'none';
               const errorDiv = e.target.parentElement;
               if (errorDiv && !errorDiv.querySelector('.error-placeholder')) {
@@ -545,6 +783,24 @@ const ServiceManagementAdmin = () => {
               }
             }}
           />
+          <Box 
+            sx={{ 
+              position: 'absolute', 
+              top: 8, 
+              right: 8, 
+              bgcolor: 'rgba(0,0,0,0.6)', 
+              color: 'white', 
+              borderRadius: '50%', 
+              p: 0.5,
+              width: 28,
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <ZoomInIcon fontSize="small" />
+          </Box>
         </Box>
         <Box sx={{ p: 1, textAlign: 'center', bgcolor: '#f8f9fa' }}>
           <Typography variant="caption" sx={{ fontWeight: 500, color: '#003047' }}>
@@ -662,12 +918,13 @@ const ServiceManagementAdmin = () => {
                   >
                     <ViewIcon />
                   </IconButton>
-                  {(provider.approvalStatus === 'pending' || provider.pendingUpdates?.status === 'pending') && (
+                  {hasProviderPendingChanges(provider) && (
                     <>
                       <IconButton
                         onClick={(e) => { e.stopPropagation(); handleProviderAction(provider._id, 'approve'); }}
                         sx={{ color: '#4CAF50' }}
                         disabled={processingActions.has(`${provider._id}_approve`) || loading}
+                        title={provider.pendingUpdates?.status === 'pending' ? 'Approve update request' : 'Approve registration'}
                       >
                         <ApproveIcon />
                       </IconButton>
@@ -675,6 +932,7 @@ const ServiceManagementAdmin = () => {
                         onClick={(e) => { e.stopPropagation(); handleOpenRejectDialog(provider._id, 'provider'); }}
                         sx={{ color: '#f44336' }}
                         disabled={processingActions.has(`${provider._id}_reject`) || loading}
+                        title={provider.pendingUpdates?.status === 'pending' ? 'Reject update request' : 'Reject registration'}
                       >
                         <RejectIcon />
                       </IconButton>
@@ -1431,7 +1689,7 @@ const ServiceManagementAdmin = () => {
           </DialogContent>
           <DialogActions sx={{ p: 3, bgcolor: '#f5f5f5' }}>
             {/* CRITICAL: Only show action buttons for pending items */}
-            {detailsDialog.item?.approvalStatus === 'pending' && detailsDialog.type === 'provider' && (
+            {detailsDialog.type === 'provider' && hasProviderPendingChanges(detailsDialog.item) && (
               <>
                 <Button 
                   onClick={() => handleOpenRejectDialog(detailsDialog.item._id, 'provider')}
@@ -1441,7 +1699,9 @@ const ServiceManagementAdmin = () => {
                   disabled={loading || processingActions.has(`${detailsDialog.item._id}_reject`)}
                   sx={{ mr: 1 }}
                 >
-                  Reject Registration
+                  {detailsDialog.item.pendingUpdates?.status === 'pending' ? 
+                    (detailsDialog.item.pendingUpdates?.deleteRequested ? 'Reject Deletion' : 'Reject Updates') : 
+                    'Reject Registration'}
                 </Button>
                 <Button 
                   onClick={() => handleProviderAction(detailsDialog.item._id, 'approve')}
@@ -1451,7 +1711,9 @@ const ServiceManagementAdmin = () => {
                   disabled={loading || processingActions.has(`${detailsDialog.item._id}_approve`)}
                   sx={{ mr: 1 }}
                 >
-                  Approve Registration
+                  {detailsDialog.item.pendingUpdates?.status === 'pending' ? 
+                    (detailsDialog.item.pendingUpdates?.deleteRequested ? 'Approve Deletion' : 'Approve Updates') : 
+                    'Approve Registration'}
                 </Button>
               </>
             )}
@@ -1504,14 +1766,16 @@ const ServiceManagementAdmin = () => {
         >
           <DialogTitle sx={{ bgcolor: '#f44336', color: 'white' }}>
             Reject {rejectDialog.type === 'service' ? 'Service' : 'Provider'}
-            {rejectDialog.itemData && (
-              <Typography variant="subtitle2" sx={{ mt: 1, opacity: 0.9 }}>
+          </DialogTitle>
+          {rejectDialog.itemData && (
+            <Box sx={{ px: 3, pt: 1, pb: 0 }}>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 'bold' }}>
                 {rejectDialog.type === 'service' 
                   ? rejectDialog.itemData.name 
                   : rejectDialog.itemData.businessName || rejectDialog.itemData.fullName}
               </Typography>
-            )}
-          </DialogTitle>
+            </Box>
+          )}
           <DialogContent sx={{ pt: 3 }}>
             <Typography variant="body1" sx={{ mb: 2 }}>
               Please provide a detailed reason for rejection. This will be sent to the service provider.
@@ -1552,6 +1816,178 @@ const ServiceManagementAdmin = () => {
           </DialogActions>
         </Dialog>
       </Container>
+      
+      {/* Image Preview Modal */}
+      <Modal
+        open={imagePreview.open}
+        onClose={() => setImagePreview({ ...imagePreview, open: false })}
+        aria-labelledby="image-preview-title"
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 1,
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            outline: 'none',
+            overflow: 'auto',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6" component="h2" sx={{ p: 1 }}>
+              {imagePreview.title}
+            </Typography>
+            <IconButton 
+              onClick={() => setImagePreview({ ...imagePreview, open: false })}
+              sx={{ color: 'gray' }}
+            >
+              <RejectIcon />
+            </IconButton>
+          </Box>
+          
+          <Box
+            sx={{
+              position: 'relative',
+              maxWidth: '100%',
+              maxHeight: 'calc(90vh - 60px)',
+              overflow: 'auto',
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            {imagePreview.imageUrl && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <img
+                  id="image-preview"
+                  src={imagePreview.imageUrl}
+                  alt={imagePreview.title}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 'calc(90vh - 100px)',
+                    objectFit: 'contain',
+                  }}
+                  onError={(e) => {
+                    // Store the original URL for potential retry
+                    const originalUrl = e.target.src;
+                    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+                    
+                    // Try alternative URLs first before showing error
+                    if (originalUrl.includes('/api/uploads/')) {
+                      e.target.src = originalUrl.replace('/api/uploads/', '/uploads/');
+                      return;
+                    } 
+                    else if (originalUrl.includes('/uploads/serviceProviders/')) {
+                      const filename = originalUrl.split('/').pop();
+                      e.target.src = `${baseUrl}/uploads/${filename}`;
+                      return;
+                    }
+                    else if (originalUrl.includes('via.placeholder.com')) {
+                      // Extract dimensions and text
+                      const urlParts = originalUrl.split('/');
+                      const dimensionsPart = urlParts[urlParts.length - 1];
+                      const dimensions = dimensionsPart.split('?')[0] || '300x140';
+                      const text = originalUrl.includes('?text=') ? 
+                        originalUrl.split('?text=')[1] : 'No+Image';
+                      
+                      e.target.src = `${baseUrl}/placeholder/${dimensions}?text=${text}`;
+                      return;
+                    }
+                    
+                    // If we get here, all fallbacks failed
+                    e.target.style.display = 'none';
+                    
+                    const errorContainer = document.createElement('div');
+                    errorContainer.id = "image-error-container";
+                    errorContainer.style.cssText = `
+                      padding: 2rem;
+                      text-align: center;
+                      color: #d32f2f;
+                      background-color: #ffebee;
+                      border-radius: 8px;
+                      margin: 1rem;
+                      max-width: 600px;
+                    `;
+                    
+                    // Try to get filename from URL for better display
+                    const filename = originalUrl.split('/').pop();
+                    
+                    errorContainer.innerHTML = `
+                      <div style="font-size: 1.25rem; font-weight: 500; margin-bottom: 0.5rem;">Failed to load image</div>
+                      <div style="font-size: 0.875rem; color: #666;">The image could not be loaded or may be missing.</div>
+                      <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem; word-break: break-all;">${filename || originalUrl}</div>
+                      <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 10px;">
+                        <button id="retry-direct-btn" style="padding: 8px 16px; background-color: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">Try Direct Path</button>
+                        <button id="retry-api-btn" style="padding: 8px 16px; background-color: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">Try API Path</button>
+                      </div>
+                    `;
+                    
+                    const parentElement = e.target.parentElement;
+                    parentElement.appendChild(errorContainer);
+                    
+                    // Add event listeners for the retry buttons
+                    setTimeout(() => {
+                      const retryDirectBtn = document.getElementById('retry-direct-btn');
+                      const retryApiBtn = document.getElementById('retry-api-btn');
+                      const imgPreview = document.getElementById('image-preview');
+                      const errorCont = document.getElementById('image-error-container');
+                      
+                      if (retryDirectBtn) {
+                        retryDirectBtn.addEventListener('click', () => {
+                          // Try direct uploads path
+                          let newUrl;
+                          if (originalUrl.includes('/api/uploads/')) {
+                            newUrl = originalUrl.replace('/api/uploads/', '/uploads/');
+                          } else {
+                            // Extract the filename and build a direct path
+                            const filename = originalUrl.split('/').pop();
+                            newUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/uploads/${filename}`;
+                          }
+                          
+                          imgPreview.style.display = '';
+                          imgPreview.src = newUrl;
+                          errorCont.style.display = 'none';
+                        });
+                      }
+                      
+                      if (retryApiBtn) {
+                        retryApiBtn.addEventListener('click', () => {
+                          // Try API path
+                          let newUrl;
+                          if (originalUrl.includes('/uploads/')) {
+                            newUrl = originalUrl.replace('/uploads/', '/api/uploads/');
+                          } else {
+                            // Extract the filename and build an API path
+                            const filename = originalUrl.split('/').pop();
+                            newUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/uploads/${filename}`;
+                          }
+                          
+                          imgPreview.style.display = '';
+                          imgPreview.src = newUrl;
+                          errorCont.style.display = 'none';
+                        });
+                      }
+                    }, 0);
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Modal>
+      
       <Footer />
     </Box>
   );

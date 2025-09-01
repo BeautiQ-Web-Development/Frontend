@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Container, Typography, TextField, Button, CircularProgress, Alert,
   Dialog, DialogTitle, DialogContent, DialogActions, Paper, Grid, Divider, IconButton,
@@ -26,6 +26,9 @@ import { useAuth } from '../../context/AuthContext';
 const CustomerBookServicePage = () => {
   const { serviceId } = useParams();
   const navigate      = useNavigate();
+  const location      = useLocation();
+  const params        = new URLSearchParams(location.search);
+  const bookingId     = params.get('bookingId');
   const { logout, user } = useAuth();  // get user for sidebar
 
   const [date, setDate]             = useState(null);
@@ -47,10 +50,12 @@ const CustomerBookServicePage = () => {
   ];
 
   const handleDateChange = (newDate) => {
+    // Even though the DatePicker will now prevent past date selection with disablePast,
+    // we'll keep this validation for consistency and safety
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of day for proper comparison
     
-    if (newDate < today) {
+    if (newDate && newDate < today) {
       // Show dialog for past date selection but DON'T update the date state
       setPastDateDialogOpen(true);
       return; // Don't update date - this prevents API call and time slot display
@@ -71,6 +76,20 @@ const CustomerBookServicePage = () => {
   };
 
   useEffect(() => {
+    // If rescheduling, preload booking data
+    if (bookingId) {
+      console.log('Rescheduling booking:', bookingId);
+      axios.get(`${process.env.REACT_APP_API_URL}/bookings/${bookingId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      })
+      .then(res => {
+        const b = res.data.booking || res.data;
+        console.log('Loaded booking for reschedule:', b);
+        setDate(new Date(b.bookingDate));
+        setSelected(b.bookingTime);
+      })
+      .catch(err => console.error('Error loading booking for reschedule:', err));
+    }
     // Only fetch slots if we have a valid date (not past date)
     if (!date) return;
     
@@ -97,7 +116,7 @@ const CustomerBookServicePage = () => {
   const closeConfirm = () => setConfirmOpen(false);
   const proceedToPayment = () => {
     closeConfirm();
-    navigate(`/customer/payment?serviceId=${serviceId}&slot=${encodeURIComponent(selected)}`);
+    navigate(`/customer/payment?serviceId=${serviceId}&slot=${encodeURIComponent(selected)}&date=${encodeURIComponent(date.toISOString())}`);
   };
 
   const handleProceed = () => {
@@ -106,7 +125,7 @@ const CustomerBookServicePage = () => {
       return;
     }
     // pass date/time to payment or next step
-    navigate(`/customer/payment?date=${date.toISOString()}&time=${selected}`);
+    navigate(`/customer/payment?serviceId=${serviceId}&date=${date.toISOString()}&slot=${encodeURIComponent(selected)}`);
   };
 
   return (
@@ -429,6 +448,7 @@ const CustomerBookServicePage = () => {
             label="Pick a date"
             value={date}
             onChange={handleDateChange}
+            disablePast={true}  // This will disable all past dates
             slots={{ textField: TextField }}
             slotProps={{
               textField: {
@@ -691,12 +711,12 @@ const CustomerBookServicePage = () => {
     }}
   >
     <Box sx={{ p: 4, position: 'relative', zIndex: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, mb: 0 }}>
         <Box
           sx={{
             width: 48,
-            height: 48,
-            borderRadius: '50%',
+            height: 8,
+            borderRadius: '10%',
             background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -707,7 +727,7 @@ const CustomerBookServicePage = () => {
         >
           <CheckCircleIcon sx={{ fontSize: 28, color: 'white' }} />
         </Box>
-        <Typography variant="h5" component="div" sx={{ fontWeight: 700, fontSize: '1.4rem' }}>
+        <Typography variant="h5" component="div" sx={{ fontWeight: 700, fontSize: '1.4rem' , color : '#f7f8f9ff'}}>
           Confirm Booking
         </Typography>
       </Box>

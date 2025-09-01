@@ -238,35 +238,51 @@ const AdminNotifications = () => {
                 <NotificationCard>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <BusinessIcon sx={{ color: '#001F3F', mr: 1 }} />
+                      {notification.type === 'newCustomer' ? (
+                        <PersonIcon sx={{ color: '#001F3F', mr: 1 }} />
+                      ) : (
+                        <BusinessIcon sx={{ color: '#001F3F', mr: 1 }} />
+                      )}
                       <Typography variant="h6" sx={{ color: '#001F3F', fontWeight: 600 }}>
-                        New Provider Registration
+                        {notification.type === 'newCustomer' ? 'New Customer Registration' : 'New Provider Registration'}
                       </Typography>
                     </Box>
 
-                    <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                      {notification.data?.businessName || 'Unknown Business'}
-                    </Typography>
+                    {notification.type === 'newCustomer' ? (
+                      <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                        {notification.data?.customerName || 'Unknown Name'}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                        {notification.data?.businessName || 'Unknown Business'}
+                      </Typography>
+                    )}
 
                     <Typography variant="body2" sx={{ color: 'rgba(0, 31, 63, 0.7)', mb: 1 }}>
                       <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                      {notification.data?.fullName || 'Unknown Name'}
+                      {notification.type === 'newCustomer' 
+                        ? notification.data?.customerName || 'Unknown Name'
+                        : notification.data?.fullName || 'Unknown Name'}
                     </Typography>
 
                     <Typography variant="body2" sx={{ color: 'rgba(0, 31, 63, 0.7)', mb: 2 }}>
-                      📧 {notification.data?.emailAddress || 'No email'}
+                      📧 {notification.type === 'newCustomer'
+                        ? notification.data?.customerEmail || 'No email'
+                        : notification.data?.emailAddress || 'No email'}
                     </Typography>
 
                     <Typography variant="body2" sx={{ color: 'rgba(0, 31, 63, 0.7)', mb: 2 }}>
                       📅 {new Date(notification.timestamp).toLocaleDateString()}
                     </Typography>
 
-                    <Chip 
-                      label="Pending Approval" 
-                      color="warning" 
-                      size="small" 
-                      sx={{ mb: 2 }}
-                    />
+                    {notification.type !== 'newCustomer' && (
+                      <Chip 
+                        label="Pending Approval" 
+                        color="warning" 
+                        size="small" 
+                        sx={{ mb: 2 }}
+                      />
+                    )}
 
                     <Button
                       variant="outlined"
@@ -299,10 +315,39 @@ const AdminNotifications = () => {
         fullWidth
       >
         <DialogTitle sx={{ bgcolor: '#001F3F', color: 'white' }}>
-          Service Provider Registration Details
+          {selectedRequest?.type === 'newCustomer' 
+            ? 'Customer Registration Details' 
+            : 'Service Provider Registration Details'}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
-          {selectedRequest && (
+          {selectedRequest && selectedRequest.type === 'newCustomer' ? (
+            // Customer registration details
+            <>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Full Name</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedRequest.data?.customerName || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Email</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedRequest.data?.customerEmail || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Registration Date</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {new Date(selectedRequest.timestamp).toLocaleString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+              
+              <Divider sx={{ my: 2 }} />
+            </>
+          ) : selectedRequest && (
+            // Service provider registration details
             <>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
@@ -345,20 +390,22 @@ const AdminNotifications = () => {
               
               <Divider sx={{ my: 2 }} />
               
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Rejection Reason (if rejecting)
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  placeholder="Please provide a detailed reason for rejection..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-              </Box>
+              {selectedRequest?.type !== 'newCustomer' && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Rejection Reason (if rejecting)
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    placeholder="Please provide a detailed reason for rejection..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    sx={{ mb: 2 }}
+                  />
+                </Box>
+              )}
             </>
           )}
         </DialogContent>
@@ -367,26 +414,31 @@ const AdminNotifications = () => {
             onClick={() => setDetailsDialog(false)} 
             variant="outlined"
           >
-            Cancel
+            {selectedRequest?.type === 'newCustomer' ? 'Close' : 'Cancel'}
           </Button>
-          <Button
-            onClick={() => handleRejectRequest(selectedRequest)}
-            variant="contained"
-            color="error"
-            startIcon={<RejectIcon />}
-            disabled={actionLoading || !rejectReason.trim()}
-          >
-            {actionLoading ? <CircularProgress size={20} /> : 'Reject & Email'}
-          </Button>
-          <Button
-            onClick={() => handleApproveRequest(selectedRequest)}
-            variant="contained"
-            color="success"
-            startIcon={<ApproveIcon />}
-            disabled={actionLoading}
-          >
-            {actionLoading ? <CircularProgress size={20} /> : 'Approve & Email'}
-          </Button>
+          
+          {selectedRequest?.type !== 'newCustomer' && (
+            <>
+              <Button
+                onClick={() => handleRejectRequest(selectedRequest)}
+                variant="contained"
+                color="error"
+                startIcon={<RejectIcon />}
+                disabled={actionLoading || !rejectReason.trim()}
+              >
+                {actionLoading ? <CircularProgress size={20} /> : 'Reject & Email'}
+              </Button>
+              <Button
+                onClick={() => handleApproveRequest(selectedRequest)}
+                variant="contained"
+                color="success"
+                startIcon={<ApproveIcon />}
+                disabled={actionLoading}
+              >
+                {actionLoading ? <CircularProgress size={20} /> : 'Approve & Email'}
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 

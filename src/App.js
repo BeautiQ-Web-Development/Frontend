@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Box, styled } from '@mui/material';
+
 
 // Import all components
 
@@ -27,8 +28,12 @@ import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
 import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
 import CustomerBookServicePage from './pages/customer/Customer.CustomerBookServicePage';
+import CustomerPaymentPage from './pages/customer/Customer.PaymentPage';
 import ProfileSettingsPage from './pages/profile/ProfileSettingsPage';
 import CustomerNotificationsPage from './pages/customer/Customer.NotificationsPage';
+import CustomerMyBookingsPage from './pages/customer/Customer.MyBookingsPage';
+import ServiceProviderBookingsPage from './pages/serviceProvider/ServiceProvider.BookingsPage';
+import ServiceProviderNotificationsPage from './pages/serviceProvider/ServiceProvider.NotificationsPage';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -38,6 +43,13 @@ const CleanBackground = styled(Box)(({ theme }) => ({
 }));
 
 function App() {
+  // // Set up the placeholder interceptor to handle via.placeholder.com URLs
+  // useEffect(() => {
+  //   // This will intercept all via.placeholder.com requests and redirect to our local service
+  //   const cleanup = setupPlaceholderInterception();
+  //   return cleanup;
+  // }, []);
+
   return (
     <CleanBackground>
         <Routes>
@@ -78,6 +90,22 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/customer/my-bookings" 
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CustomerMyBookingsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/customer/browse-services" 
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CustomerDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
         {/* Service Provider Routes */}
 <Route 
   path="/service-provider/my-services" 
@@ -110,7 +138,23 @@ function App() {
       <ServiceManagementPage />
     </ProtectedRoute>
   } 
- />
+/>
+<Route 
+  path="/service-provider/bookings" 
+  element={
+    <ProtectedRoute allowedRoles={[ 'serviceProvider' ]}>
+      <ServiceProviderBookingsPage />
+    </ProtectedRoute>
+  } 
+/>  
+<Route
+  path="/service-provider/notifications"
+  element={
+    <ProtectedRoute allowedRoles={[ 'serviceProvider' ]}>
+      <ServiceProviderNotificationsPage />
+    </ProtectedRoute>
+  }
+/>  
           {/* <Route 
             path="/service-provider/packages" 
             element={
@@ -147,6 +191,14 @@ function App() {
             path="/customer/book-service/:serviceId" 
             element={<CustomerBookServicePage />} 
           />
+          <Route 
+            path="/customer/payment" 
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CustomerPaymentPage />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/profile-settings" element={
             <ProtectedRoute>
               <ProfileSettingsPage />
@@ -163,6 +215,7 @@ function App() {
     </ProtectedRoute>
   }
 />
+          {/* Route already defined above */}
         </Routes>
     </CleanBackground>
   );

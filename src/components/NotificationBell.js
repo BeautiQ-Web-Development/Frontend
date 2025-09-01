@@ -177,7 +177,7 @@ const NotificationBell = () => {
             <NotificationsIcon />
           </Badge>
         ) : (
-          <NotificationsNoneIcon />
+          <NotificationsNoneIcon /> // Don't show zero badge
         )}
       </IconButton>
       
@@ -280,16 +280,26 @@ const NotificationBell = () => {
                     // Close the popover
                     handleClose();
                     
-                    // If it's a provider unavailable notification, navigate to notifications page
+                    // Navigate based on notification type
                     if (notification.type === 'providerUnavailable' && user?.role === 'customer') {
                       console.log('NotificationBell - Navigating to notifications page');
                       // Use window.location to ensure we actually navigate even if already on the page
                       window.location.href = '/customer/notifications';
+                    } else if (notification.type === 'booking_confirmation') {
+                      console.log('NotificationBell - Navigating to appointments page');
+                      // Navigate to appointments page based on user role
+                      if (user?.role === 'serviceProvider') {
+                        window.location.href = '/serviceProvider/appointments';
+                      } else if (user?.role === 'customer') {
+                        window.location.href = '/customer/appointments';
+                      } else if (user?.role === 'admin') {
+                        window.location.href = '/admin/appointments';
+                      }
                     } else {
                       console.log('NotificationBell - Not navigating because:',
-                        notification.type !== 'providerUnavailable' ? 
-                          `notification type is ${notification.type}, not providerUnavailable` :
-                          `user role is ${user?.role}, not customer`
+                        notification.type !== 'providerUnavailable' && notification.type !== 'booking_confirmation' ? 
+                          `notification type is ${notification.type}, not a navigable type` :
+                          `user role is ${user?.role}`
                       );
                     }
                   }}
@@ -310,22 +320,30 @@ const NotificationBell = () => {
                         {notification.type === 'providerUnavailable' && 
                           <span role="img" aria-label="provider-unavailable" style={{ marginRight: '4px' }}>🚫</span>
                         }
+                        {notification.type === 'booking_confirmation' && 
+                          <span role="img" aria-label="booking-confirmation" style={{ marginRight: '4px' }}>✅</span>
+                        }
                         {notification.type === 'providerUnavailable' 
                           ? 'Service Provider Unavailable'
                           : notification.message}
                       </Typography>
                     }
                     secondary={
-                      <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {notification.type === 'serviceUnavailable' && 'Service Unavailable'}
-                          {notification.type === 'providerUnavailable' && 'Service Provider Unavailable'}
-                          {!['serviceUnavailable', 'providerUnavailable'].includes(notification.type) && `From: ${notification.sender}`}
+                      <>
+                        <Typography component="div" variant="body2">
+                          <Box component="span" sx={{ mt: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography component="span" variant="caption" color="text.secondary">
+                              {notification.type === 'serviceUnavailable' && 'Service Unavailable'}
+                              {notification.type === 'providerUnavailable' && 'Service Provider Unavailable'}
+                              {notification.type === 'booking_confirmation' && 'Booking Confirmation'}
+                              {!['serviceUnavailable', 'providerUnavailable', 'booking_confirmation'].includes(notification.type) && `From: ${notification.sender}`}
+                            </Typography>
+                            <Typography component="span" variant="caption" color="text.secondary">
+                              {formatNotificationTime(notification.timestamp)}
+                            </Typography>
+                          </Box>
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatNotificationTime(notification.timestamp)}
-                        </Typography>
-                      </Box>
+                      </>
                     }
                   />
                 </ListItem>
