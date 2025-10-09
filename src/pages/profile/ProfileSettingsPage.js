@@ -23,7 +23,7 @@ import {
   IconButton,
   Snackbar,
   AppBar,
-  Toolbar
+  Toolbar                         
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -42,6 +42,7 @@ import { useAuth } from '../../context/AuthContext';
 import Footer from '../../components/footer';
 import CustomerSidebar from '../../components/CustomerSidebar';
 import ServiceProviderSidebar from '../../components/ServiceProviderSidebar';
+import AdminSidebar from '../../components/AdminSidebar';
 
 // Field validation helpers
 import { validateEmail, validateMobileNumber, validateName, validateNIC } from '../../utils/validation';
@@ -188,24 +189,42 @@ const ProfileSettingsPage = () => {
         return;
       }
       
-      // Submit changes
-      const response = await updateUserDetails(changedFields);
-      
-      if (response.success) {
-        setSuccess('Your profile update request has been submitted to the admin for approval.');
-        setIsEditing(false);
-        // Show confirmation dialog
-        setConfirmDialog({
-          open: true,
-          title: 'Request Submitted',
-          message: 'Your request has been successfully submitted to the Admin for approval.',
-          action: () => {
-            setConfirmDialog({...confirmDialog, open: false});
-            fetchUserProfile(); // Refresh the profile data
+      // For admin, update directly without approval
+      if (user.role === 'admin') {
+        // Direct update for admin
+        try {
+          const response = await updateUserDetails(changedFields);
+          if (response.success) {
+            setSuccess('Profile updated successfully!');
+            setIsEditing(false);
+            await fetchUserProfile(); // Refresh the profile data
+          } else {
+            setError(response.message || 'Failed to update profile. Please try again.');
           }
-        });
+        } catch (err) {
+          setError(err.message || 'An error occurred while updating your profile.');
+          console.error('Admin update profile error:', err);
+        }
       } else {
-        setError(response.message || 'Failed to update profile. Please try again.');
+        // Submit changes for approval for non-admin users
+        const response = await updateUserDetails(changedFields);
+        
+        if (response.success) {
+          setSuccess('Your profile update request has been submitted to the admin for approval.');
+          setIsEditing(false);
+          // Show confirmation dialog
+          setConfirmDialog({
+            open: true,
+            title: 'Request Submitted',
+            message: 'Your request has been successfully submitted to the Admin for approval.',
+            action: () => {
+              setConfirmDialog({...confirmDialog, open: false});
+              fetchUserProfile(); // Refresh the profile data
+            }
+          });
+        } else {
+          setError(response.message || 'Failed to update profile. Please try again.');
+        }
       }
     } catch (err) {
       setError(err.message || 'An error occurred while updating your profile.');
@@ -582,7 +601,13 @@ const ProfileSettingsPage = () => {
 
   const handleLogout = () => {
     logout();
-    navigate(user.role === 'serviceProvider' ? '/service-provider-login' : '/login');
+    if (user.role === 'serviceProvider') {
+      navigate('/service-provider-login');
+    } else if (user.role === 'admin') {
+      navigate('/admin-login');
+    } else {
+      navigate('/login');
+    }
   };
 
   const toggleSidebar = () => {
@@ -648,6 +673,12 @@ const ProfileSettingsPage = () => {
           onClose={() => setSidebarOpen(false)}
           user={user}
         />
+      ) : user.role === 'admin' ? (
+        <AdminSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          user={user}
+        />
       ) : (
         <ServiceProviderSidebar
           open={sidebarOpen}
@@ -691,13 +722,13 @@ const ProfileSettingsPage = () => {
           >
             <Tab label="Manage Details" />
             <Tab label="Change Password" />
-            <Tab label="Delete Account" />
+            {user.role !== 'admin' && <Tab label="Delete Account" />}
           </Tabs>
           
           <Box sx={{ p: 3 }}>
             {activeTab === 0 && renderPersonalDetailsForm()}
             {activeTab === 1 && renderPasswordReset()}
-            {activeTab === 2 && renderAccountDeletion()}
+            {activeTab === 2 && user.role !== 'admin' && renderAccountDeletion()}
           </Box>
         </Paper>
       </Container>

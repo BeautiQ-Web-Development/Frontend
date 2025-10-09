@@ -682,8 +682,14 @@ const ServiceManagementAdmin = () => {
       // Might be a subfolder path, use as is
       imageUrl = `${baseUrl}/uploads/${imagePath}`;
     } else {
-      // Just a filename, try in uploads folder
-      imageUrl = `${baseUrl}/uploads/${imagePath}`;
+      // Just a filename - for service provider images, they're in serviceProviders folder
+      // Check if this is a service provider image (contains profilePhoto, nicFrontPhoto, etc.)
+      if (imagePath.includes('profilePhoto') || imagePath.includes('nicFrontPhoto') || 
+          imagePath.includes('nicBackPhoto') || imagePath.includes('certificatesPhotos')) {
+        imageUrl = `${baseUrl}/uploads/serviceProviders/${imagePath}`;
+      } else {
+        imageUrl = `${baseUrl}/uploads/${imagePath}`;
+      }
     }
     
     // Function to open image in a larger preview modal
@@ -876,7 +882,7 @@ const ServiceManagementAdmin = () => {
                       sx={{ mb: 1 }}
                     />
                     <Typography variant="body2" color="text.secondary">
-                      Experience: {provider.experienceYears || 0} years
+                      Experience: {provider.experience?.years || 0} years
                     </Typography>
                   </Box>
                 </TableCell>
