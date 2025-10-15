@@ -42,7 +42,6 @@ import {
   Pending as PendingIcon,
   Cancel as RejectedIcon,
   Menu as MenuIcon,
-  Logout as LogoutIcon,
   Refresh as RefreshIcon,
   Visibility as ViewIcon,
   Check as ApproveIcon,
@@ -242,19 +241,40 @@ const ServiceManagementAdmin = () => {
         const providersWithPendingUpdates = pendingProviderUpdatesRes.data.pendingUpdates || [];
         
         console.log('👥 Providers with pending updates:', providersWithPendingUpdates.length);
+        console.log('📋 Pending updates details:', providersWithPendingUpdates.map(p => ({
+          id: p._id,
+          businessName: p.businessName,
+          requestType: p.requestType,
+          deleteRequested: p.requestType === 'delete'
+        })));
         
         // Combine providers data
         const combinedProviders = [...allProviders];
         
         // Update provider information with pending update status
+        // The backend returns flattened data, so we need to reconstruct the pendingUpdates object
         providersWithPendingUpdates.forEach(pendingProvider => {
           const index = combinedProviders.findIndex(p => p._id === pendingProvider._id);
           if (index !== -1) {
             combinedProviders[index] = {
               ...combinedProviders[index],
-              pendingUpdates: pendingProvider.pendingUpdates
+              pendingUpdates: {
+                status: 'pending',
+                deleteRequested: pendingProvider.requestType === 'delete',
+                requestType: pendingProvider.requestType,
+                requestedAt: pendingProvider.requestedAt,
+                fields: pendingProvider.fields || {},
+                reason: pendingProvider.reason || '',
+                rejectionReason: pendingProvider.rejectionReason || ''
+              }
             };
           }
+        });
+        
+        console.log('✅ Combined providers with pending updates:', {
+          total: combinedProviders.length,
+          withPendingUpdates: combinedProviders.filter(p => p.pendingUpdates?.status === 'pending').length,
+          withDeleteRequests: combinedProviders.filter(p => p.pendingUpdates?.deleteRequested === true).length
         });
         
         setServiceProviders(combinedProviders);
@@ -623,10 +643,7 @@ const ServiceManagementAdmin = () => {
     });
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/admin-login');
-  };
+  // handleLogout removed - logout is now handled by sidebar only
 
   const filterItems = (items, searchField) => {
     if (!items || !Array.isArray(items)) return [];
@@ -682,8 +699,14 @@ const ServiceManagementAdmin = () => {
       // Might be a subfolder path, use as is
       imageUrl = `${baseUrl}/uploads/${imagePath}`;
     } else {
-      // Just a filename, try in uploads folder
-      imageUrl = `${baseUrl}/uploads/${imagePath}`;
+      // Just a filename - for service provider images, they're in serviceProviders folder
+      // Check if this is a service provider image (contains profilePhoto, nicFrontPhoto, etc.)
+      if (imagePath.includes('profilePhoto') || imagePath.includes('nicFrontPhoto') || 
+          imagePath.includes('nicBackPhoto') || imagePath.includes('certificatesPhotos')) {
+        imageUrl = `${baseUrl}/uploads/serviceProviders/${imagePath}`;
+      } else {
+        imageUrl = `${baseUrl}/uploads/${imagePath}`;
+      }
     }
     
     // Function to open image in a larger preview modal
@@ -876,7 +899,7 @@ const ServiceManagementAdmin = () => {
                       sx={{ mb: 1 }}
                     />
                     <Typography variant="body2" color="text.secondary">
-                      Experience: {provider.experienceYears || 0} years
+                      Experience: {provider.experience?.years || 0} years
                     </Typography>
                   </Box>
                 </TableCell>
@@ -1150,28 +1173,7 @@ const ServiceManagementAdmin = () => {
               {new Date().toLocaleString()}
             </Typography>
           </Box>
-          <Button 
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-            sx={{
-              bgcolor: 'white',
-              color: '#003047',
-              fontWeight: 600,
-              border: '1px solid #003047',
-              borderRadius: 2,
-              px: 2,
-              py: 0.5,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                bgcolor: '#003047',
-                color: 'white',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-              }
-            }}
-          >
-            Logout
-          </Button>
+          {/* Logout button removed - use sidebar logout instead */}
         </Toolbar>
       </AppBar>
 
@@ -1276,6 +1278,7 @@ const ServiceManagementAdmin = () => {
                   {/* Only active providers in "All Providers" */}
                   <Tab label={`All Providers (${serviceProviders.filter(p => p.isActive !== false).length})`} />
                   <Tab label={`Update Requests (${serviceProviders.filter(p => p.pendingUpdates?.status === 'pending' && !p.pendingUpdates?.deleteRequested).length})`} />
+                  <Tab label={`Delete Requests (${serviceProviders.filter(p => p.pendingUpdates?.status === 'pending' && p.pendingUpdates?.deleteRequested === true).length})`} />
                   <Tab label={`Deleted Providers (${serviceProviders.filter(p => p.isActive === false).length})`} />
                 </Tabs>
                 {/* Active providers only */}
@@ -1286,8 +1289,14 @@ const ServiceManagementAdmin = () => {
                     p => p.pendingUpdates?.status === 'pending' && !p.pendingUpdates?.deleteRequested
                   )
                 )}
-                {/* Deleted providers */}
+                {/* Pending delete requests */}
                 {providerSubTab === 2 && renderServiceProvidersTable(
+                  serviceProviders.filter(
+                    p => p.pendingUpdates?.status === 'pending' && p.pendingUpdates?.deleteRequested === true
+                  )
+                )}
+                {/* Deleted providers */}
+                {providerSubTab === 3 && renderServiceProvidersTable(
                   serviceProviders.filter(p => p.isActive === false)
                 )}
               </>

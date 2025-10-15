@@ -23,7 +23,7 @@ import {
   IconButton,
   Snackbar,
   AppBar,
-  Toolbar
+  Toolbar                         
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,8 +32,7 @@ import {
   Lock as LockIcon,
   Delete as DeleteIcon,
   Email as EmailIcon,
-  Menu as MenuIcon,
-  Logout as LogoutIcon
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { getProfile, updateUserDetails, requestPasswordReset, requestAccountDeletion } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
@@ -42,13 +41,14 @@ import { useAuth } from '../../context/AuthContext';
 import Footer from '../../components/footer';
 import CustomerSidebar from '../../components/CustomerSidebar';
 import ServiceProviderSidebar from '../../components/ServiceProviderSidebar';
+import AdminSidebar from '../../components/AdminSidebar';
 
 // Field validation helpers
 import { validateEmail, validateMobileNumber, validateName, validateNIC } from '../../utils/validation';
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -188,24 +188,42 @@ const ProfileSettingsPage = () => {
         return;
       }
       
-      // Submit changes
-      const response = await updateUserDetails(changedFields);
-      
-      if (response.success) {
-        setSuccess('Your profile update request has been submitted to the admin for approval.');
-        setIsEditing(false);
-        // Show confirmation dialog
-        setConfirmDialog({
-          open: true,
-          title: 'Request Submitted',
-          message: 'Your request has been successfully submitted to the Admin for approval.',
-          action: () => {
-            setConfirmDialog({...confirmDialog, open: false});
-            fetchUserProfile(); // Refresh the profile data
+      // For admin, update directly without approval
+      if (user.role === 'admin') {
+        // Direct update for admin
+        try {
+          const response = await updateUserDetails(changedFields);
+          if (response.success) {
+            setSuccess('Profile updated successfully!');
+            setIsEditing(false);
+            await fetchUserProfile(); // Refresh the profile data
+          } else {
+            setError(response.message || 'Failed to update profile. Please try again.');
           }
-        });
+        } catch (err) {
+          setError(err.message || 'An error occurred while updating your profile.');
+          console.error('Admin update profile error:', err);
+        }
       } else {
-        setError(response.message || 'Failed to update profile. Please try again.');
+        // Submit changes for approval for non-admin users
+        const response = await updateUserDetails(changedFields);
+        
+        if (response.success) {
+          setSuccess('Your profile update request has been submitted to the admin for approval.');
+          setIsEditing(false);
+          // Show confirmation dialog
+          setConfirmDialog({
+            open: true,
+            title: 'Request Submitted',
+            message: 'Your request has been successfully submitted to the Admin for approval.',
+            action: () => {
+              setConfirmDialog({...confirmDialog, open: false});
+              fetchUserProfile(); // Refresh the profile data
+            }
+          });
+        } else {
+          setError(response.message || 'Failed to update profile. Please try again.');
+        }
       }
     } catch (err) {
       setError(err.message || 'An error occurred while updating your profile.');
@@ -580,11 +598,6 @@ const ProfileSettingsPage = () => {
     );
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate(user.role === 'serviceProvider' ? '/service-provider-login' : '/login');
-  };
-
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -614,36 +627,17 @@ const ProfileSettingsPage = () => {
               {new Date().toLocaleString()}
             </Typography>
           </Box>
-          {/* Hide header logout for service providers; sidebar has logout */}
-          {user.role !== 'serviceProvider' && (
-            <Button 
-              onClick={handleLogout}
-              startIcon={<LogoutIcon />}
-              sx={{
-                bgcolor: 'white',
-                color: '#003047',
-                fontWeight: 600,
-                border: '1px solid #003047',
-                borderRadius: 2,
-                px: 2,
-                py: 0.5,
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  bgcolor: '#003047',
-                  color: 'white',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                }
-              }}
-            >
-              Logout
-            </Button>
-          )}
         </Toolbar>
       </AppBar>
 
       {user.role === 'customer' ? (
         <CustomerSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          user={user}
+        />
+      ) : user.role === 'admin' ? (
+        <AdminSidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           user={user}
@@ -691,13 +685,13 @@ const ProfileSettingsPage = () => {
           >
             <Tab label="Manage Details" />
             <Tab label="Change Password" />
-            <Tab label="Delete Account" />
+            {user.role !== 'admin' && <Tab label="Delete Account" />}
           </Tabs>
           
           <Box sx={{ p: 3 }}>
             {activeTab === 0 && renderPersonalDetailsForm()}
             {activeTab === 1 && renderPasswordReset()}
-            {activeTab === 2 && renderAccountDeletion()}
+            {activeTab === 2 && user.role !== 'admin' && renderAccountDeletion()}
           </Box>
         </Paper>
       </Container>

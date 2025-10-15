@@ -23,7 +23,8 @@ import {
   Logout as LogoutIcon,
   ExitToApp as ResignIcon,
   CardGiftcard as PackageIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  EventNote as BookingsIcon
 } from '@mui/icons-material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -53,7 +54,7 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
     },
     {
       text: 'Bookings',
-      icon: <ChatIcon />,
+      icon: <BookingsIcon />,
       path: '/service-provider/bookings',
       description: 'View and manage customer bookings'
     },
@@ -69,12 +70,12 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
     //   path: '/service-provider/packages',
     //   description: 'View and manage your packages'
     // },
-    // {
-    //   text: 'Chat',
-    //   icon: <ChatIcon />,
-    //   path: '/service-provider/chat',
-    //   description: 'Real-time messages'
-    // },
+    {
+      text: 'Chat',
+      icon: <ChatIcon />,
+      path: '/service-provider/chat',
+      description: 'Chat with customers and admin'
+    },
     // {
     //   text: 'Performance',
     //   icon: <PerformanceIcon />,

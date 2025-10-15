@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -13,6 +13,7 @@ import {
   Checkbox,
   Alert,
   Snackbar,
+  CircularProgress,
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Visibility from '@mui/icons-material/Visibility';
@@ -20,7 +21,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Header from '../../components/Header';
 import Footer from '../../components/footer';
-import { register } from '../../services/auth';
+import { register, checkAdminExists } from '../../services/auth';
 import SuccessDialog from '../../components/SuccessDialog';
 import { 
   validateEmail, 
@@ -52,8 +53,26 @@ const CustomerRegister = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [error, setError] = useState('');
+  const [adminExists, setAdminExists] = useState(null); // null = checking, true/false = result
+  const [systemCheckLoading, setSystemCheckLoading] = useState(true);
 
   const navigate = useNavigate();
+
+  // Check if admin exists on component mount
+  useEffect(() => {
+    const checkSystem = async () => {
+      try {
+        const response = await checkAdminExists();
+        setAdminExists(response.adminExists);
+      } catch (err) {
+        console.error('Failed to check system status:', err);
+        setError('Unable to verify system status. Please try again later.');
+      } finally {
+        setSystemCheckLoading(false);
+      }
+    };
+    checkSystem();
+  }, []);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -163,6 +182,19 @@ const CustomerRegister = () => {
     setOpenDialog(false);
     navigate('/customer-login');
   };
+  // Show loading while checking system status
+  if (systemCheckLoading) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header />
+        <Container component="main" maxWidth="md" sx={{ flexGrow: 1, py: 4, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <CircularProgress />
+        </Container>
+        <Footer />
+      </Box>
+    );
+  }
+
   return (    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
       <Container component="main" maxWidth="md" sx={{ flexGrow: 1, py: 4 }}>
@@ -181,6 +213,21 @@ const CustomerRegister = () => {
             Welcome to Our Customer Register Page
           </Typography>
         </Box>
+
+        {/* Warning if admin doesn't exist */}
+        {adminExists === false && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom>System Not Initialized</Typography>
+            <Typography>
+              An administrator account must be created first before customers can register. 
+              Please contact the system administrator or{' '}
+              <Link component={RouterLink} to="/admin-register" sx={{ fontWeight: 'bold' }}>
+                create an admin account
+              </Link>{' '}
+              to initialize the system.
+            </Typography>
+          </Alert>
+        )}
         
         <Paper
           elevation={0}
@@ -196,6 +243,8 @@ const CustomerRegister = () => {
             maxWidth: '600px',
             bgcolor: 'background.paper',
             position: 'relative',
+            opacity: adminExists === false ? 0.6 : 1,
+            pointerEvents: adminExists === false ? 'none' : 'auto',
           }}
         >
           {/* Profile icon */}
