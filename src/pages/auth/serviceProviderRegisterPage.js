@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   TextField,
   Button,
@@ -25,12 +25,14 @@ import {
   Snackbar,
   IconButton,
   Box,
+  CircularProgress,
+  Link,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
-import { registerServiceProviderNoServices } from '../../services/auth';
+import { registerServiceProviderNoServices, checkAdminExists } from '../../services/auth';
 import Header from '../../components/Header';
 import Footer from '../../components/footer';
 
@@ -42,6 +44,24 @@ const ServiceProviderRegister = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [adminExists, setAdminExists] = useState(null); // null = checking, true/false = result
+  const [systemCheckLoading, setSystemCheckLoading] = useState(true);
+
+  // Check if admin exists on component mount
+  useEffect(() => {
+    const checkSystem = async () => {
+      try {
+        const response = await checkAdminExists();
+        setAdminExists(response.adminExists);
+      } catch (err) {
+        console.error('Failed to check system status:', err);
+        setError('Unable to verify system status. Please try again later.');
+      } finally {
+        setSystemCheckLoading(false);
+      }
+    };
+    checkSystem();
+  }, []);
 
   const [formData, setFormData] = useState({
     // Step 1: Personal Information
@@ -716,6 +736,19 @@ const ServiceProviderRegister = () => {
     }
   };
 
+  // Show loading while checking system status
+  if (systemCheckLoading) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header />
+        <Container component="main" maxWidth="lg" sx={{ flexGrow: 1, py: 4, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <CircularProgress />
+        </Container>
+        <Footer />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
@@ -737,6 +770,21 @@ const ServiceProviderRegister = () => {
             Service Provider Registration
           </Typography>
         </Box>
+
+        {/* Warning if admin doesn't exist */}
+        {adminExists === false && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom>System Not Initialized</Typography>
+            <Typography>
+              An administrator account must be created first before service providers can register. 
+              Please contact the system administrator or{' '}
+              <Link component={RouterLink} to="/admin-register" sx={{ fontWeight: 'bold' }}>
+                create an admin account
+              </Link>{' '}
+              to initialize the system.
+            </Typography>
+          </Alert>
+        )}
 
         <Dialog open={registrationSuccess} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ textAlign: 'center', color: '#003047' }}>
@@ -760,7 +808,12 @@ const ServiceProviderRegister = () => {
           </DialogActions>
         </Dialog>
 
-        <Paper sx={{ p: 4, borderRadius: 3 }}>
+        <Paper sx={{ 
+          p: 4, 
+          borderRadius: 3,
+          opacity: adminExists === false ? 0.6 : 1,
+          pointerEvents: adminExists === false ? 'none' : 'auto',
+        }}>
           <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
             {steps.map((label) => (
               <Step key={label}>

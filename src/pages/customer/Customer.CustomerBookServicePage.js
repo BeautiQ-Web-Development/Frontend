@@ -75,8 +75,8 @@ const CustomerBookServicePage = () => {
     setToast({ ...toast, open: false });
   };
 
+  // Effect to preload booking data once when rescheduling
   useEffect(() => {
-    // If rescheduling, preload booking data
     if (bookingId) {
       console.log('Rescheduling booking:', bookingId);
       axios.get(`${process.env.REACT_APP_API_URL}/bookings/${bookingId}`, {
@@ -90,32 +90,83 @@ const CustomerBookServicePage = () => {
       })
       .catch(err => console.error('Error loading booking for reschedule:', err));
     }
-    // Only fetch slots if we have a valid date (not past date)
-    if (!date) return;
-    
+  }, [bookingId]);
+
+  // Effect to fetch available time slots when date or service changes
+  useEffect(() => {
+    if (!date) return; // only fetch when date is set
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    // Double-check: don't fetch slots for past dates
     if (date < today) {
-      setSlots([]);
+      setSlots([]); // don't fetch past dates
       return;
     }
     
     setLoading(true);
-    axios
-      .get(`${process.env.REACT_APP_API_URL}/services/${serviceId}/available-slots`, {
-        params: { date: date.toISOString().slice(0,10) }
-      })
-      .then(res => { setSlots(res.data.available); setError(''); })
-      .catch(() => setError('Failed to load slots'))
-      .finally(() => setLoading(false));
-  }, [date, serviceId]);     // added dateError
+    
+    // Build params, including bookingId for reschedule to exclude current booking
+    const params = { date: date.toISOString().slice(0,10) };
+    if (bookingId) {
+      params.bookingId = bookingId;
+    }
+    
+    // Add debounce to prevent excessive API calls
+    const timeoutId = setTimeout(() => {
+      axios.get(`${process.env.REACT_APP_API_URL}/services/${serviceId}/available-slots`, {
+          params: params
+        })
+        .then(res => { setSlots(res.data.available); setError(''); })
+        .catch((err) => {
+          console.error('Error fetching slots:', err);
+          setError('Failed to load slots');
+        })
+        .finally(() => setLoading(false));
+    }, 300); // 300ms debounce
+    
+    // Cleanup timeout on unmount or re-render
+    return () => {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    };
+  }, [date, serviceId, bookingId]);
 
   const openConfirm = () => setConfirmOpen(true);
   const closeConfirm = () => setConfirmOpen(false);
   const proceedToPayment = () => {
     closeConfirm();
+    
+    // If rescheduling, call reschedule endpoint instead of payment
+    if (bookingId) {
+      axios.put(
+        `${process.env.REACT_APP_API_URL}/bookings/${bookingId}/reschedule`,
+        { 
+          date: date.toISOString(), 
+          slot: selected 
+        },
+        { 
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+        }
+      )
+      .then(() => {
+        setToast({ 
+          open: true, 
+          message: 'Booking rescheduled successfully!', 
+          severity: 'success' 
+        });
+        setTimeout(() => navigate('/customer/my-bookings'), 1500);
+      })
+      .catch((err) => {
+        const errorMessage = err.response?.data?.message || 'Failed to reschedule booking';
+        setToast({ 
+          open: true, 
+          message: errorMessage, 
+          severity: 'error' 
+        });
+      });
+      return;
+    }
+    
+    // New booking - proceed to payment
     navigate(`/customer/payment?serviceId=${serviceId}&slot=${encodeURIComponent(selected)}&date=${encodeURIComponent(date.toISOString())}`);
   };
 
@@ -731,7 +782,7 @@ const CustomerBookServicePage = () => {
           Confirm Booking
         </Typography>
       </Box>
-      <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.9rem' }}>
+      <Typography variant="body2" component="div" sx={{ opacity: 0.9, fontSize: '0.9rem' }}>
         Please review your appointment details
       </Typography>
     </Box>
@@ -822,7 +873,8 @@ const CustomerBookServicePage = () => {
         </Typography>
         
         <Typography 
-          variant="body1" 
+          variant="body1"
+          component="div"
           sx={{ 
             color: '#64748b',
             fontSize: '1rem',
@@ -924,7 +976,8 @@ const CustomerBookServicePage = () => {
         }}
       >
         <Typography 
-          variant="body2" 
+          variant="body2"
+          component="div"
           sx={{ 
             color: '#856404',
             fontSize: '0.85rem',

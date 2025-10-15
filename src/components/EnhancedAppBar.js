@@ -258,15 +258,7 @@ const EnhancedAppBar = ({
             {user?.fullName || user?.businessName || 'User'}
           </Typography>
           
-          {/* Hide header logout for service providers (use sidebar logout instead) */}
-          {role !== 'serviceProvider' && (
-            <NavButton
-              onClick={onLogout}
-              startIcon={<LogoutIcon />}
-            >
-              Logout
-            </NavButton>
-          )}
+          {/* Logout button removed - all roles use sidebar logout instead */}
         </Box>
       </Toolbar>
     </StyledAppBar>

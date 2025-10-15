@@ -8,7 +8,8 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Divider
+  Divider,
+  Button
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -19,13 +20,18 @@ import {
   Report as ReportsIcon,
   Settings as SettingsIcon,
   Security as SecurityIcon,
-  Notifications as NotificationsIcon
+  Notifications as NotificationsIcon,
+  Chat as ChatIcon,
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const AdminSidebar = ({ open, onClose, user }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+  
   const menuItems = [
     {
       text: 'Dashboard',
@@ -70,17 +76,23 @@ const AdminSidebar = ({ open, onClose, user }) => {
     //   description: 'System-wide usage and trends'
     // },
     {
+      text: 'Chat',
+      icon: <ChatIcon />,
+      path: '/admin/chat',
+      description: 'Chat with service providers'
+    },
+    {
       text: 'Notifications',
       icon: <NotificationsIcon />,
       path: '/admin/notifications',
-      description: 'Pending approvals and system notifications'
-    },
-    {
-      text: 'Profile',
-      icon: <UsersIcon />,
-      path: '/admin/profile',
-      description: 'Admin profile and password update'
-    }
+      description: 'Pending approvals and system notifications'}
+    // },
+    // {
+    //   text: 'Profile',
+    //   icon: <UsersIcon />,
+    //   path: '/admin/profile',
+    //   description: 'Admin profile and password update'
+    // }
   ];
 
   const handleNavigation = (path) => {
@@ -157,6 +169,24 @@ const AdminSidebar = ({ open, onClose, user }) => {
       <Divider sx={{ mx: 2, borderColor: '#003047' }} />
       
       <Box sx={{ p: 2, mt: 'auto' }}>
+        <Button
+          fullWidth
+          variant="contained"
+          color="error"
+          startIcon={<LogoutIcon />}
+          onClick={() => {
+            logout();
+            navigate('/login');
+            onClose();
+          }}
+          sx={{
+            backgroundColor: '#d32f2f',
+            '&:hover': { backgroundColor: '#b71c1c' },
+            mb: 2
+          }}
+        >
+          Logout
+        </Button>
         <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Admin Portal
         </Typography>

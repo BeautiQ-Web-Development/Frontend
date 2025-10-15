@@ -39,7 +39,6 @@ import {
   Tabs,
   Tab,
   Avatar,
-  CardMedia,
   CardActions,
   Badge,
   Tooltip as MuiTooltip,
@@ -63,8 +62,7 @@ import {
   Visibility as VisibilityIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
-  Refresh as RefreshIcon,
-  Image as ImageIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import Footer from '../../components/footer';
@@ -1058,19 +1056,7 @@ const ServiceProviderDashboard = () => {
                       <Grid item xs={12} sm={6} md={4} key={service._id}>
                         <ServiceCard status="approved">
                           <StatusBadge status="approved">Active</StatusBadge>
-                          <CardMedia
-                            component="img"
-                            height="140"
-                            image={service.images && service.images.length > 0 
-                              ? `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/services/images/${service.images[0]}`
-                              : placeholderImg
-                            }
-                            alt={service.name}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = placeholderImg;
-                            }}
-                          />
+                          {/* Image removed as per requirements */}
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                               <Typography variant="h6" component="div" noWrap sx={{ fontWeight: 500 }}>
@@ -1091,24 +1077,24 @@ const ServiceProviderDashboard = () => {
                               {service.serviceType} • {service.targetAudience}
                             </Typography>
                             <Typography variant="body2" noWrap>
-                              {service.detailedDescription ? 
+                              {service.description ? 
                                 <>
-                                  {service.detailedDescription.substring(0, 60)}
-                                  {service.detailedDescription.length > 60 ? '...' : ''}
+                                  {service.description.substring(0, 60)}
+                                  {service.description.length > 60 ? '...' : ''}
                                 </> : 
                                 'No description available'
                               }
                             </Typography>
                             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Typography variant="h6" component="div" color="primary" fontWeight="bold">
-                                {formatPrice(service.basePrice)}
+                                {formatPrice(service.pricing?.basePrice || service.basePrice)}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {service.duration} min
                               </Typography>
                             </Box>
                           </CardContent>
-                          <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                          <CardActions sx={{ justifyContent: 'center', px: 2, pb: 2 }}>
                             <Button 
                               size="small" 
                               startIcon={<VisibilityIcon />}
@@ -1116,40 +1102,7 @@ const ServiceProviderDashboard = () => {
                             >
                               Details
                             </Button>
-                            <Box>
-                              <MuiTooltip title="Edit Service">
-                                <IconButton 
-                                  size="small" 
-                                  color="primary"
-                                  onClick={() => navigate(`/service-provider/services/edit/${service._id}`)}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </MuiTooltip>
-                              <MuiTooltip title="Request Deletion">
-                                <IconButton 
-                                  size="small" 
-                                  color="error"
-                                  onClick={() => {
-                                    if (window.confirm(`Are you sure you want to request deletion of "${service.name}"?`)) {
-                                      api.delete(`/services/${service._id}`)
-                                        .then(response => {
-                                          if (response.data.success) {
-                                            fetchServices();
-                                            alert('Service deletion request submitted');
-                                          }
-                                        })
-                                        .catch(err => {
-                                          console.error('Error deleting service:', err);
-                                          setError(err.response?.data?.message || 'Failed to delete service');
-                                        });
-                                    }
-                                  }}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </MuiTooltip>
-                            </Box>
+                            {/* Edit and Delete icons removed as per requirements */}
                           </CardActions>
                         </ServiceCard>
                       </Grid>
@@ -1180,20 +1133,7 @@ const ServiceProviderDashboard = () => {
                       <Grid item xs={12} sm={6} md={4} key={service._id}>
                         <ServiceCard status="deleted">
                           <StatusBadge status="deleted">Deleted</StatusBadge>
-                          <CardMedia
-                            component="img"
-                            height="140"
-                            image={service.images && service.images.length > 0 
-                              ? `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/services/images/${service.images[0]}`
-                              : placeholderImg
-                            }
-                            alt={service.name}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = placeholderImg;
-                            }}
-                            sx={{ opacity: 0.6 }}
-                          />
+                          {/* Image removed as per requirements */}
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                               <Typography variant="h6" component="div" noWrap sx={{ fontWeight: 500, color: 'text.secondary' }}>
@@ -1265,19 +1205,7 @@ const ServiceProviderDashboard = () => {
                              service.pendingChanges?.actionType === 'update' ? 'Update Pending' : 
                              service.pendingChanges?.actionType === 'delete' ? 'Delete Pending' : 'Pending'}
                           </StatusBadge>
-                          <CardMedia
-                            component="img"
-                            height="140"
-                            image={service.images && service.images.length > 0 
-                              ? `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/services/images/${service.images[0]}`
-                              : placeholderImg
-                            }
-                            alt={service.name}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = placeholderImg;
-                            }}
-                          />
+                          {/* Image removed as per requirements */}
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                               <Typography variant="h6" component="div" noWrap sx={{ fontWeight: 500 }}>
@@ -1366,33 +1294,10 @@ const ServiceProviderDashboard = () => {
             </DialogTitle>
             <DialogContent>
               <Grid container spacing={3}>
-                {/* Service Image */}
-                <Grid item xs={12} md={4}>
-                  {serviceDetailDialog.service.images && serviceDetailDialog.service.images.length > 0 ? (
-                    <Card>
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/services/images/${serviceDetailDialog.service.images[0]}`}
-                        alt={serviceDetailDialog.service.name}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = placeholderImg;
-                        }}
-                      />
-                    </Card>
-                  ) : (
-                    <Card sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200, backgroundColor: '#f5f5f5' }}>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
-                        <ImageIcon sx={{ fontSize: 60, color: '#bdbdbd', mb: 1 }} />
-                        <Typography variant="body2" color="text.secondary">No image available</Typography>
-                      </Box>
-                    </Card>
-                  )}
-                </Grid>
+                {/* Service Image removed as per requirements */}
                 
                 {/* Service Details */}
-                <Grid item xs={12} md={8}>
+                <Grid item xs={12}>
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="subtitle1" fontWeight="bold">Service Information</Typography>
                     <Divider sx={{ mb: 2 }} />
@@ -1405,7 +1310,7 @@ const ServiceProviderDashboard = () => {
                       <Grid item xs={6}>
                         <Typography variant="body2" color="text.secondary">Price</Typography>
                         <Typography variant="body1" fontWeight="bold">
-                          {formatPrice(serviceDetailDialog.service.basePrice)}
+                          {formatPrice(serviceDetailDialog.service.pricing?.basePrice || serviceDetailDialog.service.basePrice)}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
@@ -1470,19 +1375,7 @@ const ServiceProviderDashboard = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={handleCloseServiceDetail}>Close</Button>
-              {serviceDetailDialog.service.status === 'approved' && !serviceDetailDialog.service.pendingChanges && (
-                <Button 
-                  color="primary" 
-                  variant="contained" 
-                  onClick={() => {
-                    handleCloseServiceDetail();
-                    navigate(`/service-provider/services/edit/${serviceDetailDialog.service._id}`);
-                  }}
-                  startIcon={<EditIcon />}
-                >
-                  Edit Service
-                </Button>
-              )}
+              {/* Edit button removed as per requirements */}
             </DialogActions>
           </>
         )}
