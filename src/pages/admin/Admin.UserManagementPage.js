@@ -36,7 +36,6 @@ import {
   Search as SearchIcon,
   Person as PersonIcon,
   Menu as MenuIcon,
-  Logout as LogoutIcon,
   Refresh as RefreshIcon,
   Visibility as ViewIcon,
   Email as EmailIcon,
@@ -296,10 +295,7 @@ const UserManagementAdmin = () => {
     });
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/admin-login');
-  };
+  // handleLogout removed - logout is now handled by sidebar only
 
   // Update action handler with better error handling
   const handleUpdateAction = async (customerId, approve) => {
@@ -492,14 +488,7 @@ const UserManagementAdmin = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700, color: '#fafafa' }}>
              BeautiQ Admin 
           </Typography>
-          <Button 
-            color="inherit" 
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-            sx={{ fontWeight: 600, borderRadius: 2 }}
-          >
-            Logout
-          </Button>
+          {/* Logout button removed - use sidebar logout instead */}
         </Toolbar>
       </AppBar>
 

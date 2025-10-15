@@ -32,8 +32,7 @@ import {
   Lock as LockIcon,
   Delete as DeleteIcon,
   Email as EmailIcon,
-  Menu as MenuIcon,
-  Logout as LogoutIcon
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { getProfile, updateUserDetails, requestPasswordReset, requestAccountDeletion } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
@@ -49,7 +48,7 @@ import { validateEmail, validateMobileNumber, validateName, validateNIC } from '
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -599,17 +598,6 @@ const ProfileSettingsPage = () => {
     );
   };
 
-  const handleLogout = () => {
-    logout();
-    if (user.role === 'serviceProvider') {
-      navigate('/service-provider-login');
-    } else if (user.role === 'admin') {
-      navigate('/admin-login');
-    } else {
-      navigate('/login');
-    }
-  };
-
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -639,31 +627,6 @@ const ProfileSettingsPage = () => {
               {new Date().toLocaleString()}
             </Typography>
           </Box>
-          {/* Hide header logout for service providers; sidebar has logout */}
-          {user.role !== 'serviceProvider' && (
-            <Button 
-              onClick={handleLogout}
-              startIcon={<LogoutIcon />}
-              sx={{
-                bgcolor: 'white',
-                color: '#003047',
-                fontWeight: 600,
-                border: '1px solid #003047',
-                borderRadius: 2,
-                px: 2,
-                py: 0.5,
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  bgcolor: '#003047',
-                  color: 'white',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                }
-              }}
-            >
-              Logout
-            </Button>
-          )}
         </Toolbar>
       </AppBar>
 

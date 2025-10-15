@@ -1,0 +1,209 @@
+// pages/customer/Customer.ChatPage.js - Customer chat page
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  useMediaQuery,
+  useTheme,
+  Drawer,
+  IconButton
+} from '@mui/material';
+import { Menu as MenuIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { useChat } from '../../context/ChatContext';
+import ChatSidebar from '../../components/ChatSidebar';
+import ChatWindow from '../../components/ChatWindow';
+import { useAuth } from '../../context/AuthContext';
+import Header from '../../components/Header';
+import Footer from '../../components/footer';
+import CustomerSidebar from '../../components/CustomerSidebar';
+import useSidebar from '../../hooks/useSidebar';
+
+const CustomerChatPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user } = useAuth();
+  const { sidebarOpen, toggleSidebar, closeSidebar } = useSidebar();
+  const {
+    contacts,
+    selectedContact,
+    messages,
+    onlineUsers,
+    typingUsers,
+    loading,
+    loadContacts,
+    loadChatHistory,
+    sendMessage,
+    sendTypingIndicator,
+    deleteContact,
+    setSelectedContact
+  } = useChat();
+
+  const [chatSidebarOpen, setChatSidebarOpen] = React.useState(!isMobile);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
+
+  useEffect(() => {
+    if (selectedContact) {
+      loadChatHistory(selectedContact._id);
+      if (isMobile) {
+        setChatSidebarOpen(false);
+      }
+    }
+  }, [selectedContact, loadChatHistory, isMobile]);
+
+  const handleSelectContact = (contact) => {
+    setSelectedContact(contact);
+  };
+
+  const handleDeleteContact = (contactId) => {
+    deleteContact(contactId);
+  };
+
+  const handleBackToContacts = () => {
+    setSelectedContact(null);
+    setChatSidebarOpen(true);
+  };
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Header pageTitle="Chat" toggleSidebar={toggleSidebar} />
+      
+      {/* Customer Sidebar */}
+      <CustomerSidebar 
+        open={sidebarOpen} 
+        onClose={closeSidebar} 
+        user={user}
+      />
+      
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          ml: sidebarOpen ? { xs: 0, sm: '240px' } : 0,
+          transition: 'margin-left 0.3s ease-in-out',
+          pt: '64px'
+        }}
+      >
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Paper elevation={3} sx={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <Box
+            sx={{
+              p: 2,
+              borderBottom: 1,
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            {isMobile && selectedContact && (
+              <IconButton onClick={handleBackToContacts}>
+                <ArrowBackIcon />
+              </IconButton>
+            )}
+            {isMobile && !selectedContact && (
+              <IconButton onClick={() => setChatSidebarOpen(!chatSidebarOpen)}>
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Typography variant="h5" component="h1">
+              Chat with Service Providers
+            </Typography>
+          </Box>
+
+        {/* Chat Content */}
+        <Box sx={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
+          {isMobile ? (
+            <>
+              {/* Mobile Drawer */}
+              <Drawer
+                variant="temporary"
+                open={chatSidebarOpen}
+                onClose={() => setChatSidebarOpen(false)}
+                ModalProps={{
+                  keepMounted: true, // Better mobile performance
+                }}
+                sx={{
+                  '& .MuiDrawer-paper': {
+                    width: '80%',
+                    maxWidth: 320
+                  }
+                }}
+              >
+                <ChatSidebar
+                  contacts={contacts}
+                  selectedContact={selectedContact}
+                  onSelectContact={handleSelectContact}
+                  onlineUsers={onlineUsers}
+                />
+              </Drawer>
+
+              {/* Mobile Chat Window */}
+              {selectedContact && (
+                <Box sx={{ flexGrow: 1, display: 'flex' }}>
+                  <ChatWindow
+                    contact={selectedContact}
+                    messages={messages}
+                    currentUserId={user?.id}
+                    onSendMessage={sendMessage}
+                    onTyping={sendTypingIndicator}
+                    typingUsers={typingUsers}
+                    isOnline={onlineUsers.has(selectedContact._id)}
+                    loading={loading}
+                    onDeleteContact={handleDeleteContact}
+                  />
+                </Box>
+              )}
+
+              {!selectedContact && (
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Typography variant="body1" color="text.secondary">
+                    Select a service provider to start chatting
+                  </Typography>
+                </Box>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Desktop Layout */}
+              <ChatSidebar
+                contacts={contacts}
+                selectedContact={selectedContact}
+                onSelectContact={handleSelectContact}
+                onlineUsers={onlineUsers}
+              />
+              <ChatWindow
+                contact={selectedContact}
+                messages={messages}
+                currentUserId={user?.id}
+                onSendMessage={sendMessage}
+                onTyping={sendTypingIndicator}
+                typingUsers={typingUsers}
+                isOnline={selectedContact ? onlineUsers.has(selectedContact._id) : false}
+                loading={loading}
+                onDeleteContact={handleDeleteContact}
+              />
+            </>
+          )}
+        </Box>
+      </Paper>
+    </Container>
+      </Box>
+      <Footer />
+    </Box>
+  );
+};
+
+export default CustomerChatPage;

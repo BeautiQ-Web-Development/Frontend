@@ -679,6 +679,21 @@ export const verifyToken = async () => {
   }
 };
 
+/**
+ * Check if an admin exists in the system
+ * Used to determine if the system is initialized
+ * @returns {Promise<Object>} Response containing adminExists and systemInitialized flags
+ */
+export const checkAdminExists = async () => {
+  try {
+    const response = await api.get('/auth/check-admin-exists');
+    return response.data;
+  } catch (error) {
+    console.error('Error checking admin existence:', error);
+    throw error.response?.data || { message: error.message || 'Failed to check system status' };
+  }
+};
+
 // Helper function to get user role from token
 export const getUserRoleFromToken = () => {
   try {

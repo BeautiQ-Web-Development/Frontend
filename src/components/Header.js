@@ -143,8 +143,26 @@ const Header = ({ toggleSidebar, pageTitle }) => {
     >
       <Container maxWidth="lg">
         <Toolbar sx={{ justifyContent: 'space-between', py: 1 }}>
-          {/* Logo Section */}
+          {/* Left Side - Menu icon separate from logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Sidebar Toggle Button - FAR LEFT CORNER when logged in (outside the inner Box) */}
+            {isLoggedIn && !isLanding && !isAuthPage && toggleSidebar && (
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="open sidebar"
+                onClick={toggleSidebar}
+                sx={{
+                  color: '#FFFFFF',
+                  mr: 1, // Add margin to separate from logo
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+            
+            {/* Logo */}
             <Typography
               variant="h5"
               onClick={() => navigate('/')}
@@ -159,123 +177,79 @@ const Header = ({ toggleSidebar, pageTitle }) => {
               BeautiQ
             </Typography>
             
-            {/* Date & Time Display */}
-            {!isMobile && (
-              <Chip
-                icon={<TimeIcon sx={{ color: '#FFFFFF !important' }} />}
-                label={formatDateTime(currentTime)}
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  color: '#FFFFFF',
-                  fontWeight: 500,
-                  fontSize: '0.85rem',
-                  backdropFilter: 'blur(10px)'
-                }}
-              />
-            )}
+            {/* Date & Time Display - Next to logo */}
+            <Chip
+              icon={<TimeIcon sx={{ color: '#FFFFFF !important' }} />}
+              label={formatDateTime(currentTime)}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.15)',
+                color: '#FFFFFF',
+                fontWeight: 500,
+                fontSize: '0.85rem',
+                backdropFilter: 'blur(10px)',
+                display: { xs: 'none', sm: 'flex' }
+              }}
+            />
           </Box>
 
-          {/* Navigation buttons */}
-          {(!isLoggedIn || isLanding || isAuthPage) ? (  // Always show login buttons on landing page
-            !isMobile ? (
-              <>
-                <IconButton
-                  color="inherit"
-                  aria-label="menu"
-                  onClick={handleMenuClick}
-                  edge="end"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
-                  }}
-                >
-                  <MenuIcon />
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={handleMenuClose}
-                  anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  PaperProps={{
-                    sx: {
-                      borderRadius: 2,
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      backdropFilter: 'blur(10px)',
-                      mt: 1
-                    }
-                  }}
-                >
-                  <MenuItem onClick={() => handleNavigation('/')} sx={menuItemSx}>
-                    🏠 Home
-                  </MenuItem>
-                  <MenuItem onClick={() => handleNavigation('/customer-login')} sx={menuItemSx}>
-                    <PersonIcon sx={{ mr: 1, fontSize: 18 }} /> For Customers
-                  </MenuItem>
-                  <MenuItem onClick={() => handleNavigation('/service-provider-login')} sx={menuItemSx}>
-                    <BusinessIcon sx={{ mr: 1, fontSize: 18 }} /> For Providers
-                  </MenuItem>
-                  <MenuItem onClick={() => handleNavigation('/login')} sx={menuItemSx}>
-                    <AdminIcon sx={{ mr: 1, fontSize: 18 }} /> Admin Portal
-                  </MenuItem>
-                </Menu>
-              </>
-            ) : (
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Button 
-                  onClick={() => navigate('/')}
-                  sx={{ ...navButtonSx, border: 'none' }}
-                >
-                  Home
-                </Button>
-                
-                <Button 
-                  onClick={() => navigate('/customer-login')}
-                  startIcon={<PersonIcon />}
-                  sx={navButtonSx}
-                >
-                  For Customers
-                </Button>
-                
-                <Button 
-                  onClick={() => navigate('/service-provider-login')}
-                  startIcon={<BusinessIcon />}
-                  sx={navButtonSx}
-                >
-                  For Providers
-                </Button>
-
-                <Button
-                  onClick={() => navigate('/login')}
-                  startIcon={<AdminIcon />}
-                  sx={navButtonSx}
-                >
-                  Admin Portal
-                </Button>
-              </Box>
-            )
-          ) : (
-            // logged in & not an auth page: show only a Logout button
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-              <Button
-                onClick={handleLogout}
-                startIcon={<LogoutIcon />}
+          {/* Right Side - User Menu or User Name */}
+          {(!isLoggedIn || isLanding || isAuthPage) ? (
+            <>
+              <IconButton
+                color="inherit"
+                aria-label="menu"
+                onClick={handleMenuClick}
+                edge="end"
                 sx={{
-                  ...navButtonSx,
-                  backgroundColor: '#E3F2FD',
-                  color: '#0D47A1',
-                  '&:hover': { backgroundColor: '#BBDEFB' }
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
                 }}
               >
-                Logout
-              </Button>
+                <MenuIcon />
+              </IconButton>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+                anchorOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                PaperProps={{
+                  sx: {
+                    borderRadius: 2,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                    mt: 1
+                  }
+                }}
+              >
+                <MenuItem onClick={() => handleNavigation('/')} sx={menuItemSx}>
+                  🏠 Home
+                </MenuItem>
+                <MenuItem onClick={() => handleNavigation('/customer-login')} sx={menuItemSx}>
+                  <PersonIcon sx={{ mr: 1, fontSize: 18 }} /> For Customers
+                </MenuItem>
+                <MenuItem onClick={() => handleNavigation('/service-provider-login')} sx={menuItemSx}>
+                  <BusinessIcon sx={{ mr: 1, fontSize: 18 }} /> For Providers
+                </MenuItem>
+                <MenuItem onClick={() => handleNavigation('/login')} sx={menuItemSx}>
+                  <AdminIcon sx={{ mr: 1, fontSize: 18 }} /> Admin Portal
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            // logged in: show user name on right side (menu icon is on left)
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* User Name Display */}
+              <Typography variant="body2" sx={{ color: 'white', fontWeight: 500 }}>
+                {user?.fullName || user?.emailAddress}
+              </Typography>
             </Box>
           )}
         </Toolbar>

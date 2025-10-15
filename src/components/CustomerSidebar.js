@@ -26,7 +26,8 @@ import {
   Token as TokenIcon,
   Chat as ChatIcon,
   NotificationImportant as RemindersIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -62,6 +63,12 @@ const CustomerSidebar = ({ open, onClose, user }) => {
     //   icon: <HistoryIcon />,
     //   description: 'Past appointments'
     // },
+    {
+      text: 'Chat',
+      path: '/customer/chat',
+      icon: <ChatIcon />,
+      description: 'Chat with service providers'
+    },
     {
       text: 'Profile Settings',
       path: '/profile-settings',
@@ -232,11 +239,11 @@ const CustomerSidebar = ({ open, onClose, user }) => {
           </AccordionDetails>
         </Accordion>
 
-        {/* Browse Services */}
-        {/* <ListItem disablePadding>
+        {/* Chat */}
+        <ListItem disablePadding>
           <ListItemButton 
-            onClick={() => handleNavigation('/customer/browse-services')} 
-            selected={location.pathname === '/customer/browse-services' || location.pathname.startsWith('/customer/browse-services/')}
+            onClick={() => handleNavigation('/customer/chat')} 
+            selected={location.pathname === '/customer/chat'}
             sx={{
               '&.Mui-selected': {
                 bgcolor: '#E6F7F8',
@@ -255,16 +262,16 @@ const CustomerSidebar = ({ open, onClose, user }) => {
               }
             }}
           >
-            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><SearchIcon/></ListItemIcon>
+            <ListItemIcon sx={{ color: '#003047', minWidth: 40 }}><ChatIcon/></ListItemIcon>
             <ListItemText 
-              primary="Browse Services" 
-              secondary="Find beauty services" 
+              primary="Chat" 
+              secondary="Chat with service providers"
               primaryTypographyProps={{ 
-                fontWeight: (location.pathname === '/customer/browse-services' || location.pathname.startsWith('/customer/browse-services/')) ? 700 : 400 
+                fontWeight: location.pathname === '/customer/chat' ? 700 : 400 
               }}
             />
           </ListItemButton>
-        </ListItem> */}
+        </ListItem>
 
         {/* Profile Settings */}
         <ListItem disablePadding>
@@ -337,27 +344,25 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       
       <Divider sx={{ mx: 2, borderColor: '#003047' }} />
       
-      {/* <Box sx={{ p: 2, mt: 2 }}>
+      <Box sx={{ p: 2, mt: 'auto' }}>
         <Button
           fullWidth
           variant="contained"
-          color="primary"
+          color="error"
+          startIcon={<LogoutIcon />}
           onClick={() => {
             logout();
             navigate('/login');
             onClose();
           }}
           sx={{
-            backgroundColor: '#001F3F',
-            '&:hover': { backgroundColor: '#003366' },
+            backgroundColor: '#d32f2f',
+            '&:hover': { backgroundColor: '#b71c1c' },
             mb: 2
           }}
         >
           Logout
         </Button>
-      </Box>
-       */}
-      <Box sx={{ p: 2, mt: 'auto' }}>
         <Typography variant="caption" sx={{ color: '#003047', display: 'block', textAlign: 'center' }}>
           BeautiQ Customer Portal
         </Typography>

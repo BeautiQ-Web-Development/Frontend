@@ -34,6 +34,10 @@ import CustomerNotificationsPage from './pages/customer/Customer.NotificationsPa
 import CustomerMyBookingsPage from './pages/customer/Customer.MyBookingsPage';
 import ServiceProviderBookingsPage from './pages/serviceProvider/ServiceProvider.BookingsPage';
 import ServiceProviderNotificationsPage from './pages/serviceProvider/ServiceProvider.NotificationsPage';
+import CustomerChatPage from './pages/customer/Customer.ChatPage';
+import ServiceProviderChatPage from './pages/serviceProvider/ServiceProvider.ChatPage';
+import AdminChatPage from './pages/admin/Admin.ChatPage';
+import { ChatProvider } from './context/ChatContext';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -215,6 +219,37 @@ function App() {
     </ProtectedRoute>
   }
 />
+          {/* Chat Routes */}
+          <Route
+            path="/customer/chat"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <ChatProvider>
+                  <CustomerChatPage />
+                </ChatProvider>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/service-provider/chat"
+            element={
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <ChatProvider>
+                  <ServiceProviderChatPage />
+                </ChatProvider>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/chat"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ChatProvider>
+                  <AdminChatPage />
+                </ChatProvider>
+              </ProtectedRoute>
+            }
+          />
           {/* Route already defined above */}
         </Routes>
     </CleanBackground>
