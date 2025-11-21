@@ -13,7 +13,9 @@ import {
   Info as InfoIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Fingerprint as IdIcon,
+  EventAvailable as EventAvailableIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -143,6 +145,22 @@ const ServiceProviderBookingsPage = () => {
     }
   
     return timeString; // Return original if format is unrecognized
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
   // Filter bookings based on status
@@ -301,7 +319,18 @@ const ServiceProviderBookingsPage = () => {
                       {paginatedBookings.map((booking) => (
                         <TableRow key={booking._id}>
                           <TableCell>{booking.serviceName}</TableCell>
-                          <TableCell>{booking.customerName || 'Customer'}</TableCell>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2">
+                                {booking.customerName || 'Customer'}
+                              </Typography>
+                              {(booking.customerAccountId || booking.customerUserId) && (
+                                <Typography variant="caption" color="textSecondary" display="block">
+                                  ID: {booking.customerAccountId || booking.customerUserId}
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
                           <TableCell>
                             {formatDate(booking.bookingDate)}
                             <br />
@@ -388,6 +417,15 @@ const ServiceProviderBookingsPage = () => {
                       </Typography>
                     </Box>
 
+                    {selectedBooking.confirmedAt && (
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <EventAvailableIcon color="primary" fontSize="small" />
+                        <Typography>
+                          Confirmed on {formatDateTime(selectedBooking.confirmedAt)}
+                        </Typography>
+                      </Box>
+                    )}
+
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <EventIcon color="primary" fontSize="small" />
                       <Typography>
@@ -418,6 +456,14 @@ const ServiceProviderBookingsPage = () => {
                       <Typography variant="h6" gutterBottom>
                         {selectedBooking.customerName || 'Customer'}
                       </Typography>
+                      {(selectedBooking.customerAccountId || selectedBooking.customerUserId) && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <IdIcon color="primary" fontSize="small" />
+                          <Typography variant="body2">
+                            ID: {selectedBooking.customerAccountId || selectedBooking.customerUserId}
+                          </Typography>
+                        </Box>
+                      )}
                       {selectedBooking.customerEmail && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <PersonIcon color="primary" fontSize="small" />
@@ -461,21 +507,13 @@ const ServiceProviderBookingsPage = () => {
               </DialogContent>
               <DialogActions>
                 {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'booked') && (
-                  <>
-                    <Button 
-                      onClick={() => handleStatusChange(selectedBooking._id, 'completed')}
-                      color="success"
-                      variant="contained"
-                    >
-                      Mark as Completed
-                    </Button>
-                    <Button 
-                      onClick={() => handleStatusChange(selectedBooking._id, 'cancelled')}
-                      color="error"
-                    >
-                      Cancel Booking
-                    </Button>
-                  </>
+                  <Button 
+                    onClick={() => handleStatusChange(selectedBooking._id, 'completed')}
+                    color="success"
+                    variant="contained"
+                  >
+                    Mark as Completed
+                  </Button>
                 )}
                 <Button onClick={() => setDetailsOpen(false)}>
                   Close
