@@ -18,19 +18,19 @@ export const createPaymentIntent = async (bookingData) => {
 };
 
 // Confirm successful payment with real Stripe integration
-export const confirmPayment = async (paymentId, bookingId, additionalData = {}) => {
+export const confirmPayment = async (paymentIntentId, reservationId, additionalData = {}) => {
   try {
     // Add detailed logging
     console.log('Confirming payment with complete data:', { 
-      paymentId, 
-      bookingId,
+      paymentIntentId, 
+      reservationId,
       ...additionalData
     });
     
-    // Create a more complete payload with all necessary booking data
+    // Create the payload with payment intent and reservation ID
     const payload = {
-      paymentId,
-      bookingId,
+      paymentIntentId,
+      reservationId,
       ...additionalData
     };
     
@@ -89,7 +89,7 @@ export const confirmPayment = async (paymentId, bookingId, additionalData = {}) 
       mockResponse: true,
       error: lastError?.message || 'Unknown error',
       booking: {
-        id: bookingId,
+        id: reservationId,
         status: 'confirmed',
         paymentStatus: 'paid',
         ...additionalData // Include all the booking data

@@ -12,7 +12,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Button
+  Button,
+  Avatar
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -113,12 +114,22 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       }}
     >
       <Box sx={{ p: 3, bgcolor: '#003047' }}>
-        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-          Welcome, {user?.fullName || 'Customer'}
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
-          {user?.emailAddress}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Avatar 
+            src={user?.profilePhoto} 
+            sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 56, height: 56 }}
+          >
+            {!user?.profilePhoto && (user?.fullName?.charAt(0) || 'C')}
+          </Avatar>
+          <Box>
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+              Welcome, {user?.fullName || 'Customer'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
+              {user?.emailAddress}
+            </Typography>
+          </Box>
+        </Box>
         <Typography variant="body2" sx={{ 
           color: 'white', 
           mt: 1,

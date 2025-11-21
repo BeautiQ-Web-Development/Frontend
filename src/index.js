@@ -6,6 +6,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { FeedbackProvider } from './context/FeedbackContext';
 
 // Create a theme instance
 const theme = createTheme({
@@ -90,12 +91,14 @@ root.render(
   <React.StrictMode>
     <AuthProvider>
       <NotificationProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Router>
-            <App />
-          </Router>
-        </ThemeProvider>
+        <FeedbackProvider>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Router>
+              <App />
+            </Router>
+          </ThemeProvider>
+        </FeedbackProvider>
       </NotificationProvider>
     </AuthProvider>
   </React.StrictMode>

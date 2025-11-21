@@ -181,6 +181,15 @@ const SimplePaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError }) =>
   );
 };
 
+const normalizeDateQueryValue = (value) => {
+  if (!value) return '';
+  if (value.includes('T')) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
+  }
+  return value.split(' ')[0];
+};
+
 const PaymentPage = () => {
   console.log('💫 PaymentPage component initializing/re-rendering');
   
@@ -191,6 +200,7 @@ const PaymentPage = () => {
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paymentIntent, setPaymentIntent] = useState(null);
+  const [reservationId, setReservationId] = useState(null); // NEW: Store reservation ID
   const [bookingData, setBookingData] = useState(null);
   const [error, setError] = useState(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -211,11 +221,34 @@ const PaymentPage = () => {
   const [serviceAddress, setServiceAddress] = useState('');
   const [travelingCharge, setTravelingCharge] = useState(0); // Default traveling charge
 
+  const isSlotConflictError = (err) => {
+    if (!err) {
+      return false;
+    }
+    if (err.isDoubleBooking || err.isSameServiceSameDate) {
+      return true;
+    }
+    const message = (err.message || '').toLowerCase();
+    return message.includes('already been booked') || message.includes('same date');
+  };
+
+  const handleSlotConflictError = (err) => {
+    const conflictMessage = err?.message || 'Selected time slot is no longer available. Please choose another time.';
+    console.warn('Detected slot conflict during payment flow:', err);
+    setError(conflictMessage);
+    setPaymentIntent(null);
+    setActiveStep(0);
+    setLoading(false);
+    setLocationDialogOpen(false);
+    setLocationConfirmDialogOpen(false);
+  };
+
   // Parse URL parameters
   const queryParams = new URLSearchParams(location.search);
   const serviceId = queryParams.get('serviceId');
   const slot = queryParams.get('slot');
   const dateParam = queryParams.get('date');
+  const normalizedDateParam = normalizeDateQueryValue(dateParam);
   const timeParam = queryParams.get('time');
 
   // Format date for display
@@ -367,14 +400,16 @@ const PaymentPage = () => {
           // Update state with both the service and booking data
           setService(serviceData);
           setBookingData(completeBookingData);
+          setReservationId(paymentIntentResponse.reservationId); // NEW: Store reservation ID
           setPaymentIntent({
-            id: paymentIntentResponse.id || 'mock_intent_' + Math.random().toString(36).substring(2, 15),
+            id: paymentIntentResponse.paymentIntentId || 'mock_intent_' + Math.random().toString(36).substring(2, 15),
             clientSecret: paymentIntentResponse.clientSecret
           });
         } else {
           console.warn('⚠️ No client secret in payment response, using fallback');
           setService(serviceData);
           setBookingData(completeBookingData);
+          setReservationId(paymentIntentResponse?.reservationId); // NEW: Store reservation ID if available
           setPaymentIntent({
             id: 'mock_intent_' + Math.random().toString(36).substring(2, 15),
             clientSecret: 'mock_secret_' + Math.random().toString(36).substring(2, 15)
@@ -383,8 +418,13 @@ const PaymentPage = () => {
       } catch (error) {
         console.error('❌ Error creating payment intent:', error);
         console.error('Error details:', error.response?.data || 'No response data');
+
+        if (isSlotConflictError(error)) {
+          handleSlotConflictError(error);
+          return;
+        }
         
-        // Still update state with service and booking data
+        // Still update state with service and booking data for non-conflict issues
         setService(serviceData);
         setBookingData(completeBookingData);
         setPaymentIntent({
@@ -419,7 +459,7 @@ const PaymentPage = () => {
             serviceId: serviceId,
             serviceName: service.name || 'Service',
             slot: slot || timeParam || new Date().toISOString(),
-            date: dateParam || new Date().toISOString(),
+            date: normalizedDateParam || new Date().toISOString().split('T')[0],
             customerId: user?.id,
             customerName: user?.fullName || user?.firstName + ' ' + user?.lastName || 'Customer',
             customerEmail: user?.email || 'customer@example.com',
@@ -476,9 +516,10 @@ const PaymentPage = () => {
         if (paymentIntentResponse && paymentIntentResponse.clientSecret) {
           // Set the payment intent and move to the next step
           setPaymentIntent({
-            id: paymentIntentResponse.id || 'mock_intent_' + Math.random().toString(36).substring(2, 15),
+            id: paymentIntentResponse.paymentIntentId || 'mock_intent_' + Math.random().toString(36).substring(2, 15),
             clientSecret: paymentIntentResponse.clientSecret
           });
+          setReservationId(paymentIntentResponse.reservationId); // NEW: Store reservation ID
           
           // Move to the payment step
           setActiveStep(1);
@@ -489,12 +530,18 @@ const PaymentPage = () => {
             id: 'mock_intent_' + Math.random().toString(36).substring(2, 15),
             clientSecret: 'mock_secret_' + Math.random().toString(36).substring(2, 15)
           });
+          setReservationId(paymentIntentResponse?.reservationId); // NEW: Store reservation ID if available
           
           // Move to the payment step
           setActiveStep(1);
         }
       } catch (error) {
         console.error('❌ Error creating payment intent:', error);
+
+        if (isSlotConflictError(error)) {
+          handleSlotConflictError(error);
+          return;
+        }
         
         // Show error message to user
         if (error.message && error.message.includes('Network Error')) {
@@ -611,7 +658,7 @@ const PaymentPage = () => {
           serviceId,
           serviceName: serviceData.name,
           slot: slot || timeParam,
-          date: dateParam || new Date().toISOString(),
+          date: normalizedDateParam || new Date().toISOString().split('T')[0],
           customerId: user.id,
           customerName: user.fullName || user.firstName + ' ' + user.lastName,
           customerEmail: user.email,
@@ -671,7 +718,7 @@ const PaymentPage = () => {
                 serviceId,
                 serviceName: fallbackResponse.data.service.name,
                 slot: slot || timeParam,
-                date: dateParam || new Date().toISOString(),
+                date: normalizedDateParam || new Date().toISOString().split('T')[0],
                 customerId: user.id,
                 customerName: user.fullName || user.firstName + ' ' + user.lastName,
                 customerEmail: user.email,
@@ -734,23 +781,20 @@ const PaymentPage = () => {
     if (serviceId && user) {
       fetchServiceDetails();
     }
-  }, [serviceId, slot, dateParam, timeParam, user]);
+  }, [serviceId, slot, normalizedDateParam, timeParam, user]);
 
   const handlePaymentSuccess = async (paymentResult) => {
     try {
       // Simulate real payment processing delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // If we have booking data, process it
-      if (bookingData) {
+      // If we have booking data and reservation ID, process it
+      if (bookingData && reservationId) {
         try {
-          // Generate a consistent booking ID
-          const bookingId = bookingData._id || ('mock_booking_' + Math.random().toString(36).substring(2, 15));
-          
           // Log detailed info for debugging
           console.log('Processing payment with complete data:', {
-            paymentId: paymentResult.id,
-            bookingId: bookingId,
+            paymentIntentId: paymentResult.id,
+            reservationId: reservationId,
             serviceData: {
               serviceId: bookingData.serviceId,
               serviceName: bookingData.serviceName,
@@ -787,17 +831,17 @@ const PaymentPage = () => {
             address: bookingData.address || null,
           };
           
-          // Send confirmation with all data
+          // Send confirmation with payment intent ID and reservation ID (NEW API)
           const confirmResponse = await confirmPayment(
             paymentResult.id, 
-            bookingId, 
+            reservationId, // NEW: Use reservation ID instead of booking ID
             completeBookingData
           );
           
           console.log('Payment confirmation complete response:', confirmResponse);
           // Log booking completion status
           console.log('Booking completed successfully:', {
-            booking: confirmResponse.booking || confirmResponse.bookingDetails || confirmResponse.booking,
+            booking: confirmResponse.booking,
             success: confirmResponse.success
           });
           
@@ -824,7 +868,7 @@ const PaymentPage = () => {
           }, 3000);
         }
       } else {
-        console.warn('No booking data available, showing success anyway for demo');
+        console.warn('No booking data or reservation ID available, showing success anyway for demo');
         setPaymentSuccess(true);
         setActiveStep(2);
         
@@ -1042,7 +1086,7 @@ const PaymentPage = () => {
                             <strong>Date</strong>
                           </Typography>
                           <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                            {formatDate(dateParam)}
+                            {formatDate(normalizedDateParam || dateParam)}
                           </Typography>
                         </Grid>
                         <Grid item xs={6}>

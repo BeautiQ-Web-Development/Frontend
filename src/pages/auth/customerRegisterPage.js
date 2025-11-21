@@ -23,6 +23,7 @@ import Header from '../../components/Header';
 import Footer from '../../components/footer';
 import { register, checkAdminExists } from '../../services/auth';
 import SuccessDialog from '../../components/SuccessDialog';
+import PasswordStrengthIndicator from '../../components/PasswordStrengthIndicator';
 import { 
   validateEmail, 
   validatePassword, 
@@ -43,7 +44,8 @@ const CustomerRegister = () => {
     nicNumber: '',                // added NIC state
     newPassword: '',
     confirmPassword: '',
-    agreeToTerms: false 
+    agreeToTerms: false,
+    profilePhoto: null
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -91,6 +93,16 @@ const CustomerRegister = () => {
     // Clear password error when user types
     if (passwordError && (name === 'newPassword' || name === 'confirmPassword')) {
       setPasswordError('');
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const { name, files } = e.target;
+    if (files && files[0]) {
+      setFormData({
+        ...formData,
+        [name]: files[0]
+      });
     }
   };
   const handleSubmit = async (e) => {
@@ -148,14 +160,17 @@ const CustomerRegister = () => {
     setLoading(true); // Start loading
 
     try {
-      const userData = {
-        fullName: formData.fullName,
-        currentAddress: formData.currentAddress,
-        emailAddress: formData.emailAddress,
-        mobileNumber: formData.mobileNumber,
-        nicNumber: formData.nicNumber,  // include NIC in payload
-        password: formData.newPassword
-      };
+      const userData = new FormData();
+      userData.append('fullName', formData.fullName);
+      userData.append('currentAddress', formData.currentAddress);
+      userData.append('emailAddress', formData.emailAddress);
+      userData.append('mobileNumber', formData.mobileNumber);
+      userData.append('nicNumber', formData.nicNumber);
+      userData.append('password', formData.newPassword);
+      
+      if (formData.profilePhoto) {
+        userData.append('profilePhoto', formData.profilePhoto);
+      }
 
       const response = await register(userData, 'customer');
       console.log('Registration successful:', response);
@@ -280,7 +295,43 @@ const CustomerRegister = () => {
               error={!!validationErrors.fullName}
               helperText={validationErrors.fullName}
             />
-              <TextField
+
+            {/* Profile Photo Upload */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1, color: '#003047', fontWeight: 500 }}>
+                Profile Photo (Optional)
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  borderColor: '#003047',
+                  color: '#003047',
+                  '&:hover': {
+                    borderColor: '#003047',
+                    bgcolor: 'rgba(0, 48, 71, 0.04)'
+                  }
+                }}
+              >
+                {formData.profilePhoto ? formData.profilePhoto.name : 'Choose Profile Photo'}
+                <input
+                  type="file"
+                  name="profilePhoto"
+                  hidden
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </Button>
+              {formData.profilePhoto && (
+                <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'success.main' }}>
+                  ✓ Photo selected: {formData.profilePhoto.name}
+                </Typography>
+              )}
+            </Box>
+
+            <TextField
               margin="normal"
               required
               fullWidth
@@ -352,10 +403,10 @@ const CustomerRegister = () => {
               value={formData.newPassword}
               onChange={handleChange}
               variant="outlined"
-              sx={{ mb: 2 }}
+              sx={{ mb: 0 }}
               type={showPassword ? 'text' : 'password'}
               error={!!validationErrors.newPassword}
-              helperText={validationErrors.newPassword || 'Must be 8+ chars with uppercase, lowercase, number & special character'}
+              helperText={validationErrors.newPassword}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -370,6 +421,8 @@ const CustomerRegister = () => {
                 )
               }}
             />
+            {/* Password Strength Indicator */}
+            <PasswordStrengthIndicator password={formData.newPassword} />
             
             <TextField
               margin="normal"

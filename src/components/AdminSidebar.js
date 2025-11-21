@@ -9,7 +9,8 @@ import {
   ListItemText,
   Typography,
   Divider,
-  Button
+  Button,
+  Avatar
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -22,6 +23,7 @@ import {
   Security as SecurityIcon,
   Notifications as NotificationsIcon,
   Chat as ChatIcon,
+  AccountCircle as ProfileIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -85,14 +87,14 @@ const AdminSidebar = ({ open, onClose, user }) => {
       text: 'Notifications',
       icon: <NotificationsIcon />,
       path: '/admin/notifications',
-      description: 'Pending approvals and system notifications'}
-    // },
-    // {
-    //   text: 'Profile',
-    //   icon: <UsersIcon />,
-    //   path: '/admin/profile',
-    //   description: 'Admin profile and password update'
-    // }
+      description: 'Pending approvals and system notifications'
+    },
+    {
+      text: 'Profile Management',
+      icon: <ProfileIcon />,
+      path: '/admin/profile',
+      description: 'Manage your admin profile and password'
+    }
   ];
 
   const handleNavigation = (path) => {
@@ -116,12 +118,22 @@ const AdminSidebar = ({ open, onClose, user }) => {
       }}
     >
       <Box sx={{ p: 3, bgcolor: '#003047' }}>
-        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-          Admin Panel
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
-          {user?.fullName || 'Administrator'}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <Avatar 
+            src={user?.profilePhoto} 
+            sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 56, height: 56 }}
+          >
+            {!user?.profilePhoto && (user?.fullName?.charAt(0) || 'A')}
+          </Avatar>
+          <Box>
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+              Admin Panel
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
+              {user?.fullName || 'Administrator'}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       <List sx={{ pt: 0 }}>

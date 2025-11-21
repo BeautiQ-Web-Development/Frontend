@@ -405,15 +405,36 @@ const ServiceProviderServiceFormPage = () => {
               {serviceId ? 'Edit Service' : 'Create New Service'}
             </Typography>
             {selectedCategory && (
-              <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
-                <Typography variant="h6" sx={{ 
-                  color: '#075B5E',
-                  fontWeight: 600,
-                  mb: 1
-                }}>
+              <Alert
+                severity="info"
+                sx={{
+                  mt: 2,
+                  mb: 2,
+                  mx: 'auto',
+                  px: 3,
+                  py: 2,
+                  width: 'fit-content',
+                  display: 'inline-block',
+                  borderRadius: 3,
+                  '& .MuiAlert-message': {
+                    width: '100%',
+                    textAlign: 'center',
+                    px: 0
+                  }
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: '#075B5E',
+                    fontWeight: 600,
+                    mb: 1,
+                    textAlign: 'center'
+                  }}
+                >
                   Creating service for: <strong>{selectedCategory}</strong>
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body2" sx={{ textAlign: 'center' }}>
                   The service type field below is automatically set and cannot be changed.
                 </Typography>
               </Alert>

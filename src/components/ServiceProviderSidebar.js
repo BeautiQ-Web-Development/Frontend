@@ -128,8 +128,11 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
       }}
     >
       <Box sx={{ p: 2, bgcolor: '#003047', display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 48, height: 48 }}>
-          {user?.fullName?.charAt(0) || 'S'}
+        <Avatar 
+          src={user?.profilePhoto} 
+          sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 48, height: 48 }}
+        >
+          {!user?.profilePhoto && (user?.fullName?.charAt(0) || 'S')}
         </Avatar>
         <Box>
           <Typography variant="h6" sx={{ color: '#E6F7F8', fontWeight: 600, fontSize: '1rem' }}>

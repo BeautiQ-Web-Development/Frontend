@@ -117,6 +117,34 @@ const ServiceProviderBookingsPage = () => {
     });
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+  
+    // Handles "HH:MM" format
+    if (/^\d{2}:\d{2}$/.test(timeString)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+    }
+  
+    // Handles ISO string or other date formats
+    try {
+      const date = new Date(timeString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+    } catch (e) {
+      // Fallback for safety
+    }
+  
+    return timeString; // Return original if format is unrecognized
+  };
+
   // Filter bookings based on status
   const filteredBookings = statusFilter === 'all' 
     ? bookings 
@@ -132,8 +160,12 @@ const ServiceProviderBookingsPage = () => {
   const StatusChip = ({ status }) => {
     let color, icon;
     
-    switch (status) {
+    // Normalize status for display
+    const normalizedStatus = status?.toLowerCase();
+    
+    switch (normalizedStatus) {
       case 'confirmed':
+      case 'booked':
         color = 'primary';
         icon = <CheckCircleIcon fontSize="small" />;
         break;
@@ -150,10 +182,16 @@ const ServiceProviderBookingsPage = () => {
         icon = null;
     }
     
+    // Display label
+    let displayLabel = status?.charAt(0).toUpperCase() + status?.slice(1);
+    if (normalizedStatus === 'booked') {
+      displayLabel = 'Confirmed';
+    }
+    
     return (
       <Chip
         icon={icon}
-        label={status.charAt(0).toUpperCase() + status.slice(1)}
+        label={displayLabel}
         color={color}
         size="small"
         variant="outlined"
@@ -268,7 +306,7 @@ const ServiceProviderBookingsPage = () => {
                             {formatDate(booking.bookingDate)}
                             <br />
                             <Typography variant="caption" color="textSecondary">
-                              {booking.bookingTime}
+                              {formatTime(booking.bookingTime)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -320,9 +358,9 @@ const ServiceProviderBookingsPage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   Booking Details
                   <Chip
-                    label={selectedBooking.status.toUpperCase()}
+                    label={(selectedBooking.status === 'booked' ? 'CONFIRMED' : selectedBooking.status.toUpperCase())}
                     color={
-                      selectedBooking.status === 'confirmed' ? 'primary' :
+                      selectedBooking.status === 'confirmed' || selectedBooking.status === 'booked' ? 'primary' :
                       selectedBooking.status === 'completed' ? 'success' :
                       selectedBooking.status === 'cancelled' ? 'error' :
                       'default'
@@ -360,7 +398,7 @@ const ServiceProviderBookingsPage = () => {
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <TimeIcon color="primary" fontSize="small" />
                       <Typography>
-                        {selectedBooking.bookingTime}
+                        {formatTime(selectedBooking.bookingTime)}
                       </Typography>
                     </Box>
 
@@ -422,7 +460,7 @@ const ServiceProviderBookingsPage = () => {
                 </Grid>
               </DialogContent>
               <DialogActions>
-                {selectedBooking.status === 'confirmed' && (
+                {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'booked') && (
                   <>
                     <Button 
                       onClick={() => handleStatusChange(selectedBooking._id, 'completed')}

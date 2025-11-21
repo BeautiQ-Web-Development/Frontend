@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Container, Typography, TextField, Button, CircularProgress, Alert,
   Dialog, DialogTitle, DialogContent, DialogActions, Paper, Grid, Divider, IconButton,
-  Snackbar, ToggleButton, ToggleButtonGroup
+  Snackbar, ToggleButton, ToggleButtonGroup, GlobalStyles
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -22,6 +22,80 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CustomerSidebar from '../../components/CustomerSidebar';
 import Footer from '../../components/footer';
 import { useAuth } from '../../context/AuthContext';
+
+// Normalizes a slot value to the currently selected day so comparisons stay in sync.
+const slotStringToDate = (slotValue, referenceDate) => {
+  if (!slotValue || !referenceDate) {
+    return null;
+  }
+
+  const candidate = typeof slotValue === 'string' ? slotValue.trim() : String(slotValue);
+  const reference = new Date(referenceDate);
+  if (Number.isNaN(reference.getTime())) {
+    return null;
+  }
+
+  const isoGuess = new Date(candidate);
+  if (!Number.isNaN(isoGuess.getTime())) {
+    const resolved = new Date(reference);
+    resolved.setHours(isoGuess.getHours(), isoGuess.getMinutes(), 0, 0);
+    return resolved;
+  }
+
+  const match = candidate.match(/^([0-1]?\d|2[0-3]):([0-5]\d)(?:\s*(AM|PM))?$/i);
+  if (!match) {
+    return null;
+  }
+
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3]?.toUpperCase();
+
+  if (period === 'PM' && hours < 12) {
+    hours += 12;
+  }
+  if (period === 'AM' && hours === 12) {
+    hours = 0;
+  }
+
+  const resolved = new Date(reference);
+  resolved.setHours(hours ?? 0, minutes ?? 0, 0, 0);
+  return resolved;
+};
+
+// Filters out time slots that have already passed for the currently selected day.
+const filterPastSlots = (rawSlots, selectedDate) => {
+  if (!Array.isArray(rawSlots)) {
+    return [];
+  }
+
+  if (!selectedDate) {
+    return rawSlots;
+  }
+
+  const now = new Date();
+  if (selectedDate.toDateString() !== now.toDateString()) {
+    return rawSlots;
+  }
+
+  return rawSlots.filter((slotValue) => {
+    const slotDate = slotStringToDate(slotValue, selectedDate);
+    if (!slotDate) {
+      return true;
+    }
+    return slotDate.getTime() > now.getTime();
+  });
+};
+
+const formatDateForApi = (value) => {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return '';
+  }
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const CustomerBookServicePage = () => {
   const { serviceId } = useParams();
@@ -43,11 +117,14 @@ const CustomerBookServicePage = () => {
   const [toast, setToast]           = useState({ open: false, message: '', severity: 'info' });
   const [pastDateDialogOpen, setPastDateDialogOpen] = useState(false);
 
-  const timeSlots = [
-    '08:00 AM','09:00 AM','10:00 AM','11:00 AM',
-    '12:00 PM','01:00 PM','02:00 PM','03:00 PM',
-    '04:00 PM','05:00 PM'
-  ];
+  const filteredSlots = useMemo(() => filterPastSlots(slots, date), [slots, date]);
+  const isSelectedDateToday = date ? date.toDateString() === new Date().toDateString() : false;
+
+  useEffect(() => {
+    if (selected && !filteredSlots.includes(selected)) {
+      setSelected('');
+    }
+  }, [filteredSlots, selected]);
 
   const handleDateChange = (newDate) => {
     // Even though the DatePicker will now prevent past date selection with disablePast,
@@ -105,7 +182,7 @@ const CustomerBookServicePage = () => {
     setLoading(true);
     
     // Build params, including bookingId for reschedule to exclude current booking
-    const params = { date: date.toISOString().slice(0,10) };
+    const params = { date: formatDateForApi(date) };
     if (bookingId) {
       params.bookingId = bookingId;
     }
@@ -115,7 +192,11 @@ const CustomerBookServicePage = () => {
       axios.get(`${process.env.REACT_APP_API_URL}/services/${serviceId}/available-slots`, {
           params: params
         })
-        .then(res => { setSlots(res.data.available); setError(''); })
+        .then(res => {
+          const incoming = Array.isArray(res.data?.availableSlots) ? res.data.availableSlots : [];
+          setSlots(incoming);
+          setError('');
+        })
         .catch((err) => {
           console.error('Error fetching slots:', err);
           setError('Failed to load slots');
@@ -139,8 +220,8 @@ const CustomerBookServicePage = () => {
     if (bookingId) {
       axios.put(
         `${process.env.REACT_APP_API_URL}/bookings/${bookingId}/reschedule`,
-        { 
-          date: date.toISOString(), 
+        {
+          date: formatDateForApi(date),
           slot: selected 
         },
         { 
@@ -167,7 +248,7 @@ const CustomerBookServicePage = () => {
     }
     
     // New booking - proceed to payment
-    navigate(`/customer/payment?serviceId=${serviceId}&slot=${encodeURIComponent(selected)}&date=${encodeURIComponent(date.toISOString())}`);
+    navigate(`/customer/payment?serviceId=${serviceId}&slot=${encodeURIComponent(selected)}&date=${encodeURIComponent(formatDateForApi(date))}`);
   };
 
   const handleProceed = () => {
@@ -176,7 +257,7 @@ const CustomerBookServicePage = () => {
       return;
     }
     // pass date/time to payment or next step
-    navigate(`/customer/payment?serviceId=${serviceId}&date=${date.toISOString()}&slot=${encodeURIComponent(selected)}`);
+    navigate(`/customer/payment?serviceId=${serviceId}&date=${formatDateForApi(date)}&slot=${encodeURIComponent(selected)}`);
   };
 
   return (
@@ -578,12 +659,18 @@ const CustomerBookServicePage = () => {
           </Box>
         ) : (
           <Grid container spacing={2} sx={{ maxHeight: 200, overflowY: 'auto' }}>
-            {slots.map(s => (
-              <Grid item xs={6} sm={4} key={s}>
-                <Button
-                  fullWidth
-                  variant={s === selected ? 'contained' : 'outlined'}
-                  onClick={() => setSelected(s)}
+            {filteredSlots.map((s) => {
+              const slotDateForDisplay = slotStringToDate(s, date || new Date());
+              const displayTime = slotDateForDisplay
+                ? slotDateForDisplay.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : s;
+
+              return (
+                <Grid item xs={6} sm={4} key={s}>
+                  <Button
+                    fullWidth
+                    variant={s === selected ? 'contained' : 'outlined'}
+                    onClick={() => setSelected(s)}
                   sx={{ 
                     py: 2.5,
                     borderRadius: 2.5,
@@ -612,15 +699,16 @@ const CustomerBookServicePage = () => {
                     })
                   }}
                 >
-                  {new Date(s).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Button>
-              </Grid>
-            ))}
+                  {displayTime}
+                  </Button>
+                </Grid>
+              );
+            })}
           </Grid>
         )}
 
         {/* No slots info */}
-        {!loadingSlots && date && slots.length === 0 && (
+        {!loadingSlots && date && filteredSlots.length === 0 && (
           <Alert 
             severity="info" 
             sx={{ 
@@ -635,7 +723,9 @@ const CustomerBookServicePage = () => {
               }
             }}
           >
-            No available slots for selected date. Please choose another date.
+            {isSelectedDateToday
+              ? 'No remaining slots for today. Please choose another date.'
+              : 'No available slots for selected date. Please choose another date.'}
           </Alert>
         )}
 
@@ -1080,12 +1170,12 @@ const CustomerBookServicePage = () => {
     </Button>
   </DialogActions>
 
-  <style jsx>{`
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
+  <GlobalStyles styles={{
+    '@keyframes pulse': {
+      '0%, 100%': { opacity: 1 },
+      '50%': { opacity: 0.7 }
     }
-  `}</style>
+  }} />
 </Dialog>
 
 

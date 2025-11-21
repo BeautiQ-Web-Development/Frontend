@@ -138,7 +138,7 @@ const ChatSidebar = ({ contacts, selectedContact, onSelectContact, onlineUsers }
                     }
                   >
                     <Avatar
-                      src={contact.profilePhoto ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${contact.profilePhoto}` : undefined}
+                      src={contact.profilePhoto}
                       alt={getDisplayName(contact)}
                     >
                       {getDisplayName(contact).charAt(0).toUpperCase()}

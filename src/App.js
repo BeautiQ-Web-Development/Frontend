@@ -27,6 +27,7 @@ import LandingPage from './pages/landingPage';
 import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
 import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
+import AdminProfilePage from './pages/admin/Admin.ProfilePage';
 import CustomerBookServicePage from './pages/customer/Customer.CustomerBookServicePage';
 import CustomerPaymentPage from './pages/customer/Customer.PaymentPage';
 import ProfileSettingsPage from './pages/profile/ProfileSettingsPage';
@@ -188,6 +189,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminNotifications />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/profile" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminProfilePage />
               </ProtectedRoute>
             } 
           />

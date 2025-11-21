@@ -339,6 +339,45 @@ export const updateUserDetails = async (userData) => {
     return response.data;
 
   } catch (error) {
+    console.error('❌ Profile update error:', error);
+    
+    if (error.response?.data) {
+      console.error('Error details:', error.response.data);
+      throw error.response.data;
+    }
+    
+    throw { 
+      message: error.message || 'Failed to update profile',
+      success: false 
+    };
+  }
+};
+
+// NEW: Admin Profile Update (No Approval Required)
+export const adminUpdateProfile = async (userData) => {
+  try {
+    console.log('🔄 Starting admin profile update request...');
+    
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    console.log('📤 Sending admin update request');
+    console.log('📋 Update data:', Object.keys(userData));
+
+    const response = await api.put('/auth/admin/update-profile', userData, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('✅ Admin profile update response:', response.data);
+    return response.data;
+
+  } catch (error) {
     console.error('❌ Update profile error:', {
       message: error.message,
       response: error.response?.data,

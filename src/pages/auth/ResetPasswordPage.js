@@ -304,6 +304,7 @@ import { resetPassword } from '../../services/auth';
 import { validatePassword } from '../../utils/validation';
 import Header from '../../components/Header';
 import Footer from '../../components/footer';
+import PasswordStrengthIndicator from '../../components/PasswordStrengthIndicator';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
@@ -511,8 +512,10 @@ const ResetPasswordPage = () => {
                     </InputAdornment>
                   ),
                 }}
-                sx={{ mb: 2 }}
+                sx={{ mb: 0 }}
               />
+              {/* Password Strength Indicator */}
+              <PasswordStrengthIndicator password={newPassword} />
 
               <TextField
                 margin="normal"

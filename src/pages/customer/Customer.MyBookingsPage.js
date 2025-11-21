@@ -88,6 +88,34 @@ const CustomerMyBookingsPage = () => {
     });
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+  
+    // Handles "HH:MM" format
+    if (/^\d{2}:\d{2}$/.test(timeString)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+    }
+  
+    // Handles ISO string or other date formats
+    try {
+      const date = new Date(timeString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+    } catch (e) {
+      // Fallback for safety
+    }
+  
+    return timeString; // Return original if format is unrecognized
+  };
+
   const handleViewDetails = (booking) => {
     setSelectedBooking(booking);
     setDetailsOpen(true);
@@ -102,7 +130,9 @@ const CustomerMyBookingsPage = () => {
   };
 
   const getStatusChip = (status) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    
+    switch (normalizedStatus) {
       case 'pending':
         return <Chip 
           icon={<HourglassEmptyIcon />} 
@@ -111,6 +141,7 @@ const CustomerMyBookingsPage = () => {
           size="small" 
         />;
       case 'confirmed':
+      case 'booked':
         return <Chip 
           icon={<CheckCircleIcon />} 
           label="Confirmed" 
@@ -278,7 +309,7 @@ const CustomerMyBookingsPage = () => {
                       <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <TimeIcon fontSize="small" color="primary" />
                         <Typography variant="body2">
-                          {booking.bookingTime}
+                          {formatTime(booking.bookingTime)}
                         </Typography>
                       </Box>
                       
@@ -369,7 +400,7 @@ const CustomerMyBookingsPage = () => {
                   <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TimeIcon color="primary" fontSize="small" />
                     <Typography>
-                      {selectedBooking.bookingTime}
+                      {formatTime(selectedBooking.bookingTime)}
                     </Typography>
                   </Box>
                   
@@ -438,7 +469,7 @@ const CustomerMyBookingsPage = () => {
               <Button onClick={() => setDetailsOpen(false)}>
                 Close
               </Button>
-              {selectedBooking.status === 'pending' || selectedBooking.status === 'confirmed' ? (
+              {(selectedBooking.status === 'pending' || selectedBooking.status === 'confirmed' || selectedBooking.status === 'booked') ? (
                 <Button 
                   variant="contained" 
                   color="primary"

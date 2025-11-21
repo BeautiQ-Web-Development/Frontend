@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import CircleIcon from '@mui/icons-material/Circle';
+import { useFeedback } from '../../context/FeedbackContext';
 
 const CustomerNotificationsPage = () => {
   const { user, logout } = useAuth();
@@ -21,6 +22,7 @@ const CustomerNotificationsPage = () => {
     markAllAsRead, 
     refreshNotifications
   } = useNotifications();
+  const { openFeedbackModal } = useFeedback();
   const [selected, setSelected] = useState(null);
 
   // FIXED: Ensure notifications is always an array and log the actual data
@@ -55,6 +57,19 @@ const CustomerNotificationsPage = () => {
         console.log('Marking notification as read:', notificationId);
         markAsRead(notificationId);
       }
+    }
+    const normalizedType = notif.type?.toLowerCase();
+    if (normalizedType === 'feedback_request' || normalizedType === 'feedback' || normalizedType === 'feedbackrequest') {
+      openFeedbackModal({
+        notificationId: notif._id,
+        bookingId: notif.data?.bookingId,
+        serviceId: notif.data?.serviceId,
+        serviceName: notif.data?.serviceName || notif.data?.service,
+        providerId: notif.data?.providerId,
+        providerName: notif.data?.providerName,
+        scheduledAt: notif.data?.scheduledAt || notif.data?.slotTime,
+        message: notif.message,
+      });
     }
   };
 

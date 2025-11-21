@@ -130,7 +130,7 @@ const ChatWindow = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box sx={{ position: 'relative' }}>
             <Avatar
-              src={contact.profilePhoto ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${contact.profilePhoto}` : undefined}
+              src={contact.profilePhoto}
               alt={getDisplayName()}
               sx={{ width: 48, height: 48 }}
             >
