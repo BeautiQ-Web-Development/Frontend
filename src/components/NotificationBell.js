@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge, IconButton, Popover, Box, Typography, List, ListItem, ListItemText, Divider, Button, CircularProgress } from '@mui/material';
 import { Notifications as NotificationsIcon, NotificationsNone as NotificationsNoneIcon, Check as CheckIcon } from '@mui/icons-material';
 import { fetchNotifications, markAsRead, markAllAsRead, connectToSocket, getSocket } from '../services/notification';
+import { useFeedback } from '../context/FeedbackContext';
 import { useAuth } from '../context/AuthContext';
 
 const NotificationBell = () => {
   const { user } = useAuth();
+  const { openFeedbackModal } = useFeedback();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -107,6 +109,12 @@ const NotificationBell = () => {
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const isFeedbackRequest = (notification) => {
+    if (!notification?.type) return false;
+    const normalized = notification.type.toLowerCase();
+    return normalized === 'feedback_request' || normalized === 'feedback' || normalized === 'feedbackrequest';
   };
 
   // Mark a notification as read
@@ -281,7 +289,19 @@ const NotificationBell = () => {
                     handleClose();
                     
                     // Navigate based on notification type
-                    if (notification.type === 'providerUnavailable' && user?.role === 'customer') {
+                    if (isFeedbackRequest(notification)) {
+                      const requestPayload = {
+                        notificationId: notification._id,
+                        bookingId: notification.data?.bookingId,
+                        serviceId: notification.data?.serviceId,
+                        serviceName: notification.data?.serviceName || notification.data?.service,
+                        providerId: notification.data?.providerId,
+                        providerName: notification.data?.providerName,
+                        scheduledAt: notification.data?.scheduledAt || notification.data?.slotTime,
+                        message: notification.message,
+                      };
+                      openFeedbackModal(requestPayload);
+                    } else if (notification.type === 'providerUnavailable' && user?.role === 'customer') {
                       console.log('NotificationBell - Navigating to notifications page');
                       // Use window.location to ensure we actually navigate even if already on the page
                       window.location.href = '/customer/notifications';

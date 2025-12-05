@@ -9,7 +9,8 @@ import {
   ListItemText,
   Typography,
   Divider,
-  Button
+  Button,
+  Avatar
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -22,15 +23,20 @@ import {
   Security as SecurityIcon,
   Notifications as NotificationsIcon,
   Chat as ChatIcon,
-  Logout as LogoutIcon
+  AccountCircle as ProfileIcon,
+  Logout as LogoutIcon,
+  Star as StarIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const AdminSidebar = ({ open, onClose, user }) => {
+const AdminSidebar = ({ open, onClose, user: propUser }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { user: contextUser, logout } = useAuth();
+  
+  // Use context user for profile data (always up-to-date), fallback to prop user
+  const user = contextUser || propUser;
   
   const menuItems = [
     {
@@ -85,14 +91,20 @@ const AdminSidebar = ({ open, onClose, user }) => {
       text: 'Notifications',
       icon: <NotificationsIcon />,
       path: '/admin/notifications',
-      description: 'Pending approvals and system notifications'}
-    // },
-    // {
-    //   text: 'Profile',
-    //   icon: <UsersIcon />,
-    //   path: '/admin/profile',
-    //   description: 'Admin profile and password update'
-    // }
+      description: 'Pending approvals and system notifications'
+    },
+    {
+      text: 'Profile Management',
+      icon: <ProfileIcon />,
+      path: '/admin/profile',
+      description: 'Manage your admin profile and password'
+    },
+    {
+      text: 'Feedback & Ratings',
+      icon: <StarIcon />,
+      path: '/admin/feedback',
+      description: 'Manage all feedback'
+    }
   ];
 
   const handleNavigation = (path) => {
@@ -115,13 +127,34 @@ const AdminSidebar = ({ open, onClose, user }) => {
         }
       }}
     >
-      <Box sx={{ p: 3, bgcolor: '#003047' }}>
-        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-          Admin Panel
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
-          {user?.fullName || 'Administrator'}
-        </Typography>
+      <Box sx={{ p: 2, bgcolor: '#003047', display: 'flex', alignItems: 'center', gap: 2 }}>
+             <Avatar 
+               key={`avatar-${user?.profilePhoto || 'no-photo'}-${user?._timestamp || Date.now()}`}
+               src={user?.profilePhoto || undefined}
+               imgProps={{ 
+                 crossOrigin: 'anonymous',
+                 referrerPolicy: 'no-referrer',
+                 onError: (e) => {
+                   console.log('Failed to load profile photo, using fallback', user?.profilePhoto);
+                   e.target.style.display = 'none';
+                 },
+                 onLoad: () => {
+                   console.log('Profile photo loaded successfully:', user?.profilePhoto);
+                 }
+               }}
+               sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 48, height: 48 }}
+             >
+               {user?.fullName?.charAt(0) || 'A'}
+             </Avatar>
+          <Box>
+           <Typography variant="h6" sx={{ color: '#E6F7F8', fontWeight: 600, fontSize: '1rem' }}>
+                      {user?.businessName || 'Administrator'}
+                    </Typography>
+            <Typography variant="body2" sx={{ color: '#C5E8EA', fontSize: '0.85rem' }}>
+                       {user?.fullName}
+                     </Typography>
+          </Box>
+        
       </Box>
 
       <List sx={{ pt: 0 }}>

@@ -35,6 +35,10 @@ const MessageBubble = ({ message, isOwnMessage, senderName, senderAvatar }) => {
         <Avatar
           src={senderAvatar}
           alt={senderName}
+          imgProps={{ 
+            crossOrigin: 'anonymous',
+            referrerPolicy: 'no-referrer'
+          }}
           sx={{ width: 32, height: 32, mr: 1 }}
         >
           {senderName?.charAt(0).toUpperCase()}
@@ -90,6 +94,10 @@ const MessageBubble = ({ message, isOwnMessage, senderName, senderAvatar }) => {
         <Avatar
           src={senderAvatar}
           alt={senderName}
+          imgProps={{ 
+            crossOrigin: 'anonymous',
+            referrerPolicy: 'no-referrer'
+          }}
           sx={{ width: 32, height: 32, ml: 1 }}
         >
           {senderName?.charAt(0).toUpperCase()}

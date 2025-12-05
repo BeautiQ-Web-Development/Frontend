@@ -12,7 +12,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Button
+  Button,
+  Avatar
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -32,10 +33,13 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const CustomerSidebar = ({ open, onClose, user }) => {
+const CustomerSidebar = ({ open, onClose, user: propUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user: contextUser, logout } = useAuth();
+  
+  // Use context user for profile data (always up-to-date), fallback to prop user
+  const user = contextUser || propUser;
 
   // Enhanced menu items with better descriptions
   const menuItems = [
@@ -113,12 +117,34 @@ const CustomerSidebar = ({ open, onClose, user }) => {
       }}
     >
       <Box sx={{ p: 3, bgcolor: '#003047' }}>
-        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-          Welcome, {user?.fullName || 'Customer'}
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
-          {user?.emailAddress}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Avatar 
+            key={`avatar-${user?.profilePhoto || 'no-photo'}-${user?._timestamp || Date.now()}`}
+            src={user?.profilePhoto || undefined}
+            imgProps={{ 
+              crossOrigin: 'anonymous',
+              referrerPolicy: 'no-referrer',
+              onError: (e) => {
+                console.log('Failed to load profile photo, using fallback', user?.profilePhoto);
+                e.target.style.display = 'none';
+              },
+              onLoad: () => {
+                console.log('Profile photo loaded successfully:', user?.profilePhoto);
+              }
+            }}
+            sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 56, height: 56 }}
+          >
+            {user?.fullName?.charAt(0) || 'C'}
+          </Avatar>
+          <Box>
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+              Welcome, {user?.fullName || 'Customer'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#E6F7F8' }}>
+              {user?.emailAddress}
+            </Typography>
+          </Box>
+        </Box>
         <Typography variant="body2" sx={{ 
           color: 'white', 
           mt: 1,

@@ -27,6 +27,7 @@ import LandingPage from './pages/landingPage';
 import ServiceManagementAdmin from './pages/admin/Admin.ServiceManagement';
 import UserManagementAdmin from './pages/admin/Admin.UserManagementPage';
 import AdminNotifications from './pages/admin/Admin.NotificationsPage';
+import AdminProfilePage from './pages/admin/Admin.ProfilePage';
 import CustomerBookServicePage from './pages/customer/Customer.CustomerBookServicePage';
 import CustomerPaymentPage from './pages/customer/Customer.PaymentPage';
 import ProfileSettingsPage from './pages/profile/ProfileSettingsPage';
@@ -38,6 +39,8 @@ import CustomerChatPage from './pages/customer/Customer.ChatPage';
 import ServiceProviderChatPage from './pages/serviceProvider/ServiceProvider.ChatPage';
 import AdminChatPage from './pages/admin/Admin.ChatPage';
 import { ChatProvider } from './context/ChatContext';
+import ServiceProviderFeedbackPage from './pages/serviceProvider/ServiceProvider.FeedbackPage';
+import AdminFeedbackPage from './pages/admin/Admin.FeedbackPage';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -192,6 +195,14 @@ function App() {
             } 
           />
           <Route 
+            path="/admin/profile" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/customer/book-service/:serviceId" 
             element={<CustomerBookServicePage />} 
           />
@@ -249,6 +260,22 @@ function App() {
                 </ChatProvider>
               </ProtectedRoute>
             }
+          />
+          <Route 
+            path="/service-provider/feedback" 
+            element={
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <ServiceProviderFeedbackPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/feedback" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminFeedbackPage />
+              </ProtectedRoute>
+            } 
           />
           {/* Route already defined above */}
         </Routes>
