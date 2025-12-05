@@ -13,7 +13,9 @@ import {
   Info as InfoIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Fingerprint as IdIcon,
+  EventAvailable as EventAvailableIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -117,6 +119,50 @@ const ServiceProviderBookingsPage = () => {
     });
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+  
+    // Handles "HH:MM" format
+    if (/^\d{2}:\d{2}$/.test(timeString)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+    }
+  
+    // Handles ISO string or other date formats
+    try {
+      const date = new Date(timeString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+    } catch (e) {
+      // Fallback for safety
+    }
+  
+    return timeString; // Return original if format is unrecognized
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
   // Filter bookings based on status
   const filteredBookings = statusFilter === 'all' 
     ? bookings 
@@ -132,8 +178,12 @@ const ServiceProviderBookingsPage = () => {
   const StatusChip = ({ status }) => {
     let color, icon;
     
-    switch (status) {
+    // Normalize status for display
+    const normalizedStatus = status?.toLowerCase();
+    
+    switch (normalizedStatus) {
       case 'confirmed':
+      case 'booked':
         color = 'primary';
         icon = <CheckCircleIcon fontSize="small" />;
         break;
@@ -150,10 +200,16 @@ const ServiceProviderBookingsPage = () => {
         icon = null;
     }
     
+    // Display label
+    let displayLabel = status?.charAt(0).toUpperCase() + status?.slice(1);
+    if (normalizedStatus === 'booked') {
+      displayLabel = 'Confirmed';
+    }
+    
     return (
       <Chip
         icon={icon}
-        label={status.charAt(0).toUpperCase() + status.slice(1)}
+        label={displayLabel}
         color={color}
         size="small"
         variant="outlined"
@@ -263,12 +319,23 @@ const ServiceProviderBookingsPage = () => {
                       {paginatedBookings.map((booking) => (
                         <TableRow key={booking._id}>
                           <TableCell>{booking.serviceName}</TableCell>
-                          <TableCell>{booking.customerName || 'Customer'}</TableCell>
+                          <TableCell>
+                            <Box>
+                              <Typography variant="body2">
+                                {booking.customerName || 'Customer'}
+                              </Typography>
+                              {(booking.customerAccountId || booking.customerUserId) && (
+                                <Typography variant="caption" color="textSecondary" display="block">
+                                  ID: {booking.customerAccountId || booking.customerUserId}
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
                           <TableCell>
                             {formatDate(booking.bookingDate)}
                             <br />
                             <Typography variant="caption" color="textSecondary">
-                              {booking.bookingTime}
+                              {formatTime(booking.bookingTime)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -320,9 +387,9 @@ const ServiceProviderBookingsPage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   Booking Details
                   <Chip
-                    label={selectedBooking.status.toUpperCase()}
+                    label={(selectedBooking.status === 'booked' ? 'CONFIRMED' : selectedBooking.status.toUpperCase())}
                     color={
-                      selectedBooking.status === 'confirmed' ? 'primary' :
+                      selectedBooking.status === 'confirmed' || selectedBooking.status === 'booked' ? 'primary' :
                       selectedBooking.status === 'completed' ? 'success' :
                       selectedBooking.status === 'cancelled' ? 'error' :
                       'default'
@@ -350,6 +417,15 @@ const ServiceProviderBookingsPage = () => {
                       </Typography>
                     </Box>
 
+                    {selectedBooking.confirmedAt && (
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <EventAvailableIcon color="primary" fontSize="small" />
+                        <Typography>
+                          Confirmed on {formatDateTime(selectedBooking.confirmedAt)}
+                        </Typography>
+                      </Box>
+                    )}
+
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <EventIcon color="primary" fontSize="small" />
                       <Typography>
@@ -360,7 +436,7 @@ const ServiceProviderBookingsPage = () => {
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <TimeIcon color="primary" fontSize="small" />
                       <Typography>
-                        {selectedBooking.bookingTime}
+                        {formatTime(selectedBooking.bookingTime)}
                       </Typography>
                     </Box>
 
@@ -380,6 +456,14 @@ const ServiceProviderBookingsPage = () => {
                       <Typography variant="h6" gutterBottom>
                         {selectedBooking.customerName || 'Customer'}
                       </Typography>
+                      {(selectedBooking.customerAccountId || selectedBooking.customerUserId) && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <IdIcon color="primary" fontSize="small" />
+                          <Typography variant="body2">
+                            ID: {selectedBooking.customerAccountId || selectedBooking.customerUserId}
+                          </Typography>
+                        </Box>
+                      )}
                       {selectedBooking.customerEmail && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <PersonIcon color="primary" fontSize="small" />
@@ -422,22 +506,14 @@ const ServiceProviderBookingsPage = () => {
                 </Grid>
               </DialogContent>
               <DialogActions>
-                {selectedBooking.status === 'confirmed' && (
-                  <>
-                    <Button 
-                      onClick={() => handleStatusChange(selectedBooking._id, 'completed')}
-                      color="success"
-                      variant="contained"
-                    >
-                      Mark as Completed
-                    </Button>
-                    <Button 
-                      onClick={() => handleStatusChange(selectedBooking._id, 'cancelled')}
-                      color="error"
-                    >
-                      Cancel Booking
-                    </Button>
-                  </>
+                {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'booked') && (
+                  <Button 
+                    onClick={() => handleStatusChange(selectedBooking._id, 'completed')}
+                    color="success"
+                    variant="contained"
+                  >
+                    Mark as Completed
+                  </Button>
                 )}
                 <Button onClick={() => setDetailsOpen(false)}>
                   Close

@@ -24,6 +24,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { register } from '../../services/auth';
 import Header from '../../components/Header';
 import Footer from '../../components/footer';
+import PasswordStrengthIndicator from '../../components/PasswordStrengthIndicator';
 
 const AdminRegister = () => {
   const navigate = useNavigate();
@@ -34,7 +35,8 @@ const AdminRegister = () => {
     mobileNumber: '',
     password: '',
     confirmPassword: '',
-    role: 'admin'
+    role: 'admin',
+    profilePhoto: null
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +54,16 @@ const AdminRegister = () => {
       ...formData,
       [name]: value
     });
+  };
+
+  const handleFileChange = (e) => {
+    const { name, files } = e.target;
+    if (files && files[0]) {
+      setFormData({
+        ...formData,
+        [name]: files[0]
+      });
+    }
   };
 
   const handleClickShowPassword = () => {
@@ -76,7 +88,19 @@ const AdminRegister = () => {
     }
     
     try {
-      await register(formData, 'admin');
+      const userData = new FormData();
+      userData.append('fullName', formData.fullName);
+      userData.append('currentAddress', formData.currentAddress);
+      userData.append('emailAddress', formData.emailAddress);
+      userData.append('mobileNumber', formData.mobileNumber);
+      userData.append('password', formData.password);
+      userData.append('role', 'admin');
+      
+      if (formData.profilePhoto) {
+        userData.append('profilePhoto', formData.profilePhoto);
+      }
+
+      await register(userData, 'admin');
       setSuccess(true);
       
       // Redirect to login after successful registration
@@ -163,6 +187,41 @@ const AdminRegister = () => {
               variant="outlined"
               sx={{ mb: 2 }}
             />
+
+            {/* Profile Photo Upload */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ mb: 1, color: '#003047', fontWeight: 500 }}>
+                Profile Photo (Optional)
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  borderColor: '#003047',
+                  color: '#003047',
+                  '&:hover': {
+                    borderColor: '#003047',
+                    bgcolor: 'rgba(0, 48, 71, 0.04)'
+                  }
+                }}
+              >
+                {formData.profilePhoto ? formData.profilePhoto.name : 'Choose Profile Photo'}
+                <input
+                  type="file"
+                  name="profilePhoto"
+                  hidden
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </Button>
+              {formData.profilePhoto && (
+                <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'success.main' }}>
+                  ✓ Photo selected: {formData.profilePhoto.name}
+                </Typography>
+              )}
+            </Box>
             
             <TextField
               margin="normal"
@@ -218,7 +277,7 @@ const AdminRegister = () => {
               value={formData.password}
               onChange={handleChange}
               variant="outlined"
-              sx={{ mb: 2 }}
+              sx={{ mb: 0 }}
               type={showPassword ? 'text' : 'password'}
               InputProps={{
                 endAdornment: (
@@ -234,6 +293,8 @@ const AdminRegister = () => {
                 )
               }}
             />
+            {/* Password Strength Indicator */}
+            <PasswordStrengthIndicator password={formData.password} />
             
             <TextField
               margin="normal"

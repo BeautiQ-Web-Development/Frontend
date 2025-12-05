@@ -1697,65 +1697,7 @@ const ServiceManagementAdmin = () => {
             )}
           </DialogContent>
           <DialogActions sx={{ p: 3, bgcolor: '#f5f5f5' }}>
-            {/* CRITICAL: Only show action buttons for pending items */}
-            {detailsDialog.type === 'provider' && hasProviderPendingChanges(detailsDialog.item) && (
-              <>
-                <Button 
-                  onClick={() => handleOpenRejectDialog(detailsDialog.item._id, 'provider')}
-                  variant="contained"
-                  color="error"
-                  startIcon={<RejectIcon />}
-                  disabled={loading || processingActions.has(`${detailsDialog.item._id}_reject`)}
-                  sx={{ mr: 1 }}
-                >
-                  {detailsDialog.item.pendingUpdates?.status === 'pending' ? 
-                    (detailsDialog.item.pendingUpdates?.deleteRequested ? 'Reject Deletion' : 'Reject Updates') : 
-                    'Reject Registration'}
-                </Button>
-                <Button 
-                  onClick={() => handleProviderAction(detailsDialog.item._id, 'approve')}
-                  variant="contained"
-                  color="success"
-                  startIcon={<ApproveIcon />}
-                  disabled={loading || processingActions.has(`${detailsDialog.item._id}_approve`)}
-                  sx={{ mr: 1 }}
-                >
-                  {detailsDialog.item.pendingUpdates?.status === 'pending' ? 
-                    (detailsDialog.item.pendingUpdates?.deleteRequested ? 'Approve Deletion' : 'Approve Updates') : 
-                    'Approve Registration'}
-                </Button>
-              </>
-            )}
-            
-            {/* CRITICAL: Only show action buttons for actionable services */}
-            {detailsDialog.item && detailsDialog.type === 'service' && 
-             detailsDialog.item.status !== 'rejected' && 
-             detailsDialog.item.status !== 'deleted' && 
-             (detailsDialog.item.status === 'pending_approval' || detailsDialog.item.pendingChanges) && (
-              <>
-                <Button 
-                  onClick={() => handleOpenRejectDialog(detailsDialog.item._id, 'service')}
-                  variant="contained"
-                  color="error"
-                  startIcon={<RejectIcon />}
-                  disabled={loading || processingActions.has(`${detailsDialog.item._id}_reject`)}
-                  sx={{ mr: 1 }}
-                >
-                  Reject
-                </Button>
-                <Button 
-                  onClick={() => handleApproval(detailsDialog.item._id, detailsDialog.type, 'approve')}
-                  variant="contained"
-                  color="success"
-                  startIcon={<ApproveIcon />}
-                  disabled={loading || processingActions.has(`${detailsDialog.item._id}_approve`)}
-                  sx={{ mr: 1 }}
-                >
-                  Approve
-                </Button>
-              </>
-            )}
-            
+            {/* Only CLOSE button - REJECT and APPROVE buttons removed */}
             <Button 
               onClick={() => setDetailsDialog({ open: false, item: null, type: '' })}
               variant="contained"

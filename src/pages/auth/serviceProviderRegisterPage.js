@@ -23,7 +23,7 @@ import {
   DialogActions,
   Alert,
   Snackbar,
-  IconButton,
+IconButton,
   Box,
   CircularProgress,
   Link,
@@ -35,6 +35,7 @@ import {
 import { registerServiceProviderNoServices, checkAdminExists } from '../../services/auth';
 import Header from '../../components/Header';
 import Footer from '../../components/footer';
+import PasswordStrengthIndicator from '../../components/PasswordStrengthIndicator';
 
 const ServiceProviderRegister = () => {
   const navigate = useNavigate();
@@ -77,7 +78,6 @@ const ServiceProviderRegister = () => {
     nicFrontPhoto: null,
     nicBackPhoto: null,
     profilePhoto: null,
-    certificatesPhotos: [], // Add certificates array
     
     // Step 2: Business Information
     businessName: '',
@@ -281,22 +281,6 @@ const ServiceProviderRegister = () => {
     }
   };
 
-  // Handle multiple certificate uploads
-  const handleCertificateUpload = (files) => {
-    const fileArray = Array.from(files);
-    setFormData(prev => ({
-      ...prev,
-      certificatesPhotos: [...prev.certificatesPhotos, ...fileArray]
-    }));
-  };
-
-  const removeCertificate = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      certificatesPhotos: prev.certificatesPhotos.filter((_, i) => i !== index)
-    }));
-  };
-
   const removeFile = (fieldName) => {
     setFormData(prev => ({
       ...prev,
@@ -324,50 +308,7 @@ const ServiceProviderRegister = () => {
               error={!!validationErrors.fullName}
               helperText={validationErrors.fullName || 'Enter your full name as per NIC'}
             />
-            <Grid item xs={12}>
-            <Box sx={{ border: '2px dashed #ccc', borderRadius: 2, p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Experience Certificates (Optional)
-              </Typography>
-              <Typography variant="caption" display="block" sx={{ mb: 1, color: 'text.secondary' }}>
-                Upload certificates, awards, or documents that prove your experience
-              </Typography>
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="certificates-upload"
-                type="file"
-                multiple
-                onChange={(e) => handleCertificateUpload(e.target.files)}
-              />
-              <label htmlFor="certificates-upload">
-                <Button variant="outlined" component="span" size="small">
-                  Upload Certificates
-                </Button>
-              </label>
-              
-              {formData.certificatesPhotos.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="success.main" display="block">
-                    ✓ {formData.certificatesPhotos.length} certificate(s) uploaded
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                    {formData.certificatesPhotos.map((file, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {file.name}
-                        </Typography>
-                        <IconButton size="small" onClick={() => removeCertificate(index)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </Box>
           </Grid>
-        </Grid>
           
           <Grid item xs={12}>
             <TextField
@@ -421,8 +362,10 @@ const ServiceProviderRegister = () => {
               value={formData.password}
               onChange={handleChange}
               error={!!validationErrors.password}
-              helperText={validationErrors.password || 'Min 8 chars: uppercase, lowercase, number, special char'}
+              helperText={validationErrors.password}
             />
+            {/* Password Strength Indicator */}
+            <PasswordStrengthIndicator password={formData.password} />
           </Grid>
           
           <Grid item xs={12}>
@@ -649,58 +592,6 @@ const ServiceProviderRegister = () => {
             />
           </Grid>
 
-          {/* MOVED: Certificate Upload to Business Details */}
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="primary">
-              Experience Certificates (Optional)
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Box sx={{ border: '2px dashed #ccc', borderRadius: 2, p: 2, textAlign: 'center' }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Upload Certificates & Awards
-              </Typography>
-              <Typography variant="caption" display="block" sx={{ mb: 1, color: 'text.secondary' }}>
-                Upload certificates, awards, or documents that prove your experience and qualifications
-              </Typography>
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="certificates-upload"
-                type="file"
-                multiple
-                onChange={(e) => handleCertificateUpload(e.target.files)}
-              />
-              <label htmlFor="certificates-upload">
-                <Button variant="outlined" component="span" size="small">
-                  Upload Certificates
-                </Button>
-              </label>
-              
-              {formData.certificatesPhotos.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="success.main" display="block">
-                    ✓ {formData.certificatesPhotos.length} certificate(s) uploaded
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                    {formData.certificatesPhotos.map((file, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
-                        <Typography variant="caption" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {file.name}
-                        </Typography>
-                        <IconButton size="small" onClick={() => removeCertificate(index)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          </Grid>
-
           {/* MOVED TERMS TO BUSINESS DETAILS STEP */}
           <Grid item xs={12}>
             <Divider sx={{ my: 2 }} />
@@ -794,7 +685,7 @@ const ServiceProviderRegister = () => {
             <DialogContentText sx={{ textAlign: 'center', mb: 2 }}>
               Your registration has been submitted for admin approval.
               You will be notified via email once your account is approved.
-              You can add your services after approval. Any certificates you uploaded will be reviewed by the admin.
+              You can add your services after approval.
             </DialogContentText>
           </DialogContent>
           <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>

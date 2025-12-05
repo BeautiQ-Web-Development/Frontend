@@ -23,7 +23,9 @@ import {
   IconButton,
   Snackbar,
   AppBar,
-  Toolbar                         
+  Toolbar,
+  Avatar,
+  Badge                         
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,9 +34,10 @@ import {
   Lock as LockIcon,
   Delete as DeleteIcon,
   Email as EmailIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  PhotoCamera as PhotoCameraIcon
 } from '@mui/icons-material';
-import { getProfile, updateUserDetails, requestPasswordReset, requestAccountDeletion } from '../../services/auth';
+import { getProfile, updateUserDetails, requestPasswordReset, requestAccountDeletion, uploadProfilePhoto } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
 // Remove Header import as we're replacing it with AppBar
 // import Header from '../../components/Header';
@@ -48,7 +51,7 @@ import { validateEmail, validateMobileNumber, validateName, validateNIC } from '
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,6 +65,8 @@ const ProfileSettingsPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [reassignReason, setReassignReason] = useState('');
   const [reassignDialog, setReassignDialog] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     fetchUserProfile();
@@ -197,6 +202,10 @@ const ProfileSettingsPage = () => {
             setSuccess('Profile updated successfully!');
             setIsEditing(false);
             await fetchUserProfile(); // Refresh the profile data
+            // Update global user context
+            if (updateUser) {
+              updateUser(changedFields);
+            }
           } else {
             setError(response.message || 'Failed to update profile. Please try again.');
           }
@@ -302,6 +311,80 @@ const ProfileSettingsPage = () => {
     }
   };
 
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files[0];
+    
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image size must be less than 10MB');
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload the photo
+    try {
+      setUploadingPhoto(true);
+      setError('');
+      
+      console.log('📸 Starting profile photo upload...', file.name);
+      const response = await uploadProfilePhoto(file);
+      console.log('✅ Upload response:', response);
+      
+      if (response.success) {
+        setSuccess('Profile photo updated successfully!');
+        const newPhotoUrl = response.data.profilePhoto;
+        console.log('✅ New photo URL:', newPhotoUrl);
+        
+        // Update the profile data with new photo URL
+        setProfileData(prev => ({
+          ...prev,
+          profilePhoto: newPhotoUrl
+        }));
+        setEditedData(prev => ({
+          ...prev,
+          profilePhoto: newPhotoUrl
+        }));
+        
+        // Update global user context - THIS IS CRITICAL
+        if (updateUser) {
+          console.log('✅ Updating global user context with new photo');
+          updateUser({ profilePhoto: newPhotoUrl });
+          
+          // Force a small delay to ensure state updates propagate
+          setTimeout(() => {
+            console.log('✅ Context update complete, sidebar should refresh now');
+          }, 100);
+        } else {
+          console.warn('⚠️ updateUser function not available');
+        }
+      } else {
+        setError(response.message || 'Failed to upload profile photo');
+        setPhotoPreview(null);
+      }
+    } catch (err) {
+      console.error('❌ Photo upload error:', err);
+      setError(err.message || 'An error occurred while uploading the photo');
+      setPhotoPreview(null);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const renderPersonalDetailsForm = () => {
     if (!profileData) return <CircularProgress />;
     
@@ -345,6 +428,64 @@ const ProfileSettingsPage = () => {
             )}
           </Box>
           
+          <Divider sx={{ mb: 3 }} />
+
+          {/* Profile Photo Section */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+            <Badge
+              overlap="circular"
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              badgeContent={
+                <IconButton
+                  component="label"
+                  sx={{
+                    bgcolor: '#003047',
+                    color: 'white',
+                    '&:hover': { bgcolor: '#004d6d' },
+                    width: 40,
+                    height: 40
+                  }}
+                  disabled={uploadingPhoto}
+                >
+                  <PhotoCameraIcon />
+                  <input
+                    hidden
+                    accept="image/*"
+                    type="file"
+                    onChange={handlePhotoUpload}
+                  />
+                </IconButton>
+              }
+            >
+              <Avatar
+                key={photoPreview || profileData?.profilePhoto || 'default'}
+                src={photoPreview || profileData?.profilePhoto}
+                alt={profileData?.fullName}
+                imgProps={{ 
+                  crossOrigin: 'anonymous',
+                  referrerPolicy: 'no-referrer'
+                }}
+                sx={{
+                  width: 120,
+                  height: 120,
+                  border: '4px solid #003047',
+                  mb: 1
+                }}
+              />
+            </Badge>
+            {uploadingPhoto && (
+              <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} />
+                <Typography variant="body2" color="text.secondary">
+                  Uploading photo...
+                </Typography>
+              </Box>
+            )}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+              Click the camera icon to update your profile photo
+            </Typography>
+          </Box>
+
           <Divider sx={{ mb: 3 }} />
           
           <Grid container spacing={3}>
