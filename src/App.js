@@ -39,6 +39,8 @@ import CustomerChatPage from './pages/customer/Customer.ChatPage';
 import ServiceProviderChatPage from './pages/serviceProvider/ServiceProvider.ChatPage';
 import AdminChatPage from './pages/admin/Admin.ChatPage';
 import { ChatProvider } from './context/ChatContext';
+import ServiceProviderFeedbackPage from './pages/serviceProvider/ServiceProvider.FeedbackPage';
+import AdminFeedbackPage from './pages/admin/Admin.FeedbackPage';
 
 // Styled component for clean white background
 const CleanBackground = styled(Box)(({ theme }) => ({
@@ -258,6 +260,22 @@ function App() {
                 </ChatProvider>
               </ProtectedRoute>
             }
+          />
+          <Route 
+            path="/service-provider/feedback" 
+            element={
+              <ProtectedRoute allowedRoles={['serviceProvider']}>
+                <ServiceProviderFeedbackPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/feedback" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminFeedbackPage />
+              </ProtectedRoute>
+            } 
           />
           {/* Route already defined above */}
         </Routes>

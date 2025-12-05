@@ -22,15 +22,26 @@ import {
   Slider,
   FormGroup,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Avatar,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Search as SearchIcon,
   LocationOn as LocationIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
+  StarHalf as StarHalfIcon
 } from '@mui/icons-material';
+import CloseIcon from '@mui/icons-material/Close';
 import { getApprovedServiceProviders } from '../../services/auth';
+import { fetchAllProviderStats, fetchProviderFeedback } from '../../services/feedback';
 import { useNavigate } from 'react-router-dom';
 
 const CustomerBrowseServicesPage = () => {
@@ -51,6 +62,13 @@ const CustomerBrowseServicesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Feedback Dialog State
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [selectedProviderFeedback, setSelectedProviderFeedback] = useState({ feedbacks: [], stats: {} });
+  const [selectedProviderName, setSelectedProviderName] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,13 +84,33 @@ const CustomerBrowseServicesPage = () => {
       setLoading(true);
       setError('');
       
-      console.log('Fetching approved service providers...');
-      const response = await getApprovedServiceProviders();
+      console.log('Fetching approved service providers and stats...');
+      const [providersResponse, statsResponse] = await Promise.all([
+        getApprovedServiceProviders(),
+        fetchAllProviderStats().catch(err => {
+          console.error('Error fetching stats:', err);
+          return {};
+        })
+      ]);
       
-      console.log('Service providers response:', response);
+      console.log('Service providers response:', providersResponse);
+      console.log('Stats response:', statsResponse);
       
-      if (response.success && response.providers) {
-        setServiceProviders(response.providers);
+      if (providersResponse.success && providersResponse.providers) {
+        let providers = providersResponse.providers;
+        const stats = statsResponse || {};
+        
+        // Merge stats and sort
+        providers = providers.map(p => ({
+          ...p,
+          rating: stats[p._id]?.avgRating || 0,
+          feedbackCount: stats[p._id]?.totalFeedbacks || 0
+        }));
+        
+        // Sort by rating descending
+        providers.sort((a, b) => b.rating - a.rating);
+
+        setServiceProviders(providers);
         setError('');
       } else {
         setServiceProviders([]);
@@ -85,6 +123,27 @@ const CustomerBrowseServicesPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFeedbackClick = async (e, providerId, providerName) => {
+    e.stopPropagation();
+    try {
+      setFeedbackLoading(true);
+      setSelectedProviderName(providerName);
+      setFeedbackDialogOpen(true);
+      
+      const data = await fetchProviderFeedback(providerId);
+      setSelectedProviderFeedback(data);
+    } catch (error) {
+      console.error('Error fetching provider feedback:', error);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleCloseFeedbackDialog = () => {
+    setFeedbackDialogOpen(false);
+    setSelectedProviderFeedback({ feedbacks: [], stats: {} });
   };
 
   const filterProviders = () => {
@@ -292,9 +351,19 @@ const CustomerBrowseServicesPage = () => {
                   </Typography>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Rating value={4.8} readOnly size="small" />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      4.8 (758)
+                    <Rating value={provider.rating || 0} precision={0.1} readOnly size="small" />
+                    <Typography 
+                      variant="body2" 
+                      color="primary" 
+                      sx={{ 
+                        ml: 1, 
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        fontWeight: 'bold'
+                      }}
+                      onClick={(e) => handleFeedbackClick(e, provider._id, provider.businessName)}
+                    >
+                      {provider.rating ? provider.rating.toFixed(1) : '0.0'} ({provider.feedbackCount || 0} Feedback)
                     </Typography>
                   </Box>
 
@@ -367,6 +436,97 @@ const CustomerBrowseServicesPage = () => {
           ))}
         </Grid>
       )}
+
+      {/* Feedback Dialog */}
+      <Dialog 
+        open={feedbackDialogOpen} 
+        onClose={handleCloseFeedbackDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid #eee' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Feedback for {selectedProviderName}</Typography>
+            <IconButton onClick={handleCloseFeedbackDialog} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {feedbackLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, bgcolor: '#f8f9fa', p: 2, borderRadius: 2 }}>
+                <Box sx={{ textAlign: 'center', mr: 4 }}>
+                  <Typography variant="h3" color="primary" sx={{ fontWeight: 'bold' }}>
+                    {selectedProviderFeedback.stats?.avgRating || 0}
+                  </Typography>
+                  <Rating value={selectedProviderFeedback.stats?.avgRating || 0} precision={0.1} readOnly />
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedProviderFeedback.stats?.totalFeedbacks || 0} ratings
+                  </Typography>
+                </Box>
+                <Divider orientation="vertical" flexItem sx={{ mr: 4 }} />
+                <Box sx={{ flexGrow: 1 }}>
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = selectedProviderFeedback.stats?.ratingCounts?.[star] || 0;
+                    const total = selectedProviderFeedback.stats?.totalFeedbacks || 1;
+                    const percent = (count / total) * 100;
+                    return (
+                      <Box key={star} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        <Typography variant="body2" sx={{ minWidth: 20, mr: 1 }}>{star}</Typography>
+                        <StarIcon sx={{ fontSize: 16, color: '#faaf00', mr: 1 }} />
+                        <Box sx={{ flexGrow: 1, height: 8, bgcolor: '#eee', borderRadius: 4, overflow: 'hidden' }}>
+                          <Box sx={{ width: `${percent}%`, height: '100%', bgcolor: '#faaf00' }} />
+                        </Box>
+                        <Typography variant="body2" sx={{ minWidth: 30, ml: 1, textAlign: 'right' }}>{count}</Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+
+              <Typography variant="h6" gutterBottom>Customer Reviews</Typography>
+              {selectedProviderFeedback.feedbacks?.length === 0 ? (
+                <Typography color="text.secondary" sx={{ py: 2 }}>No reviews yet.</Typography>
+              ) : (
+                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                  {selectedProviderFeedback.feedbacks?.map((feedback) => (
+                    <Box key={feedback._id} sx={{ mb: 2, p: 2, border: '1px solid #eee', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main', fontSize: '0.875rem' }}>
+                            {feedback.customerName?.charAt(0) || 'C'}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle2">{feedback.customerName || 'Customer'}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(feedback.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Rating value={feedback.rating} readOnly size="small" />
+                      </Box>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        {feedback.feedbackText}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                        Service: {feedback.serviceName}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseFeedbackDialog}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

@@ -117,6 +117,17 @@ export const register = async (data, role) => {
       : 'register-customer';
   const endpoint = `/auth/${path}`;
 
+  // Check if data is already FormData (for file uploads)
+  // This handles customer and admin registration with profile photos
+  if (data instanceof FormData) {
+    console.log(`📤 Registering ${role} with FormData (file upload supported)`);
+    const res = await api.post(endpoint, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
+  }
+
+  // For service provider with plain object, convert to FormData
   if (role === 'serviceProvider') {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
@@ -134,6 +145,7 @@ export const register = async (data, role) => {
     return res.data;
   }
 
+  // For plain JSON data (no files)
   const res = await api.post(endpoint, data);
   return res.data;
 };
@@ -395,6 +407,51 @@ export const adminUpdateProfile = async (userData) => {
     }
     
     throw error.response?.data || { message: error.message || 'Failed to update profile details' };
+  }
+};
+
+// Upload Profile Photo
+export const uploadProfilePhoto = async (photoFile) => {
+  try {
+    console.log('📸 Starting profile photo upload...');
+    
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    if (!photoFile) {
+      throw new Error('No photo file provided');
+    }
+
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('profilePhoto', photoFile);
+
+    console.log('📤 Uploading profile photo:', photoFile.name);
+
+    const response = await api.post('/auth/update-profile-photo', formData, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    console.log('✅ Profile photo upload response:', response.data);
+    return response.data;
+
+  } catch (error) {
+    console.error('❌ Profile photo upload error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
+    throw error.response?.data || { 
+      message: error.message || 'Failed to upload profile photo',
+      success: false 
+    };
   }
 };
 

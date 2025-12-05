@@ -132,6 +132,10 @@ const ChatWindow = ({
             <Avatar
               src={contact.profilePhoto}
               alt={getDisplayName()}
+              imgProps={{ 
+                crossOrigin: 'anonymous',
+                referrerPolicy: 'no-referrer'
+              }}
               sx={{ width: 48, height: 48 }}
             >
               {getDisplayName().charAt(0).toUpperCase()}

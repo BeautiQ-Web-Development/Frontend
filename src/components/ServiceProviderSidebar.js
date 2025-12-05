@@ -24,14 +24,20 @@ import {
   ExitToApp as ResignIcon,
   CardGiftcard as PackageIcon,
   Settings as SettingsIcon,
-  EventNote as BookingsIcon
+  EventNote as BookingsIcon,
+  Star as StarIcon
 } from '@mui/icons-material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
+const ServiceProviderSidebar = ({ open, onClose, user: propUser, onResignation }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user: contextUser, logout } = useAuth();
+  
+  // Use context user for profile data (always up-to-date), fallback to prop user
+  const user = contextUser || propUser;
   
   const menuItems = [
     {
@@ -99,6 +105,12 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
       icon: <SettingsIcon />,
       path: '/profile-settings',
       description: 'Update your profile settings'
+    },
+    {
+      text: 'Feedback & Ratings',
+      icon: <StarIcon />,
+      path: '/service-provider/feedback',
+      description: 'View customer feedback'
     }
   ];
 
@@ -129,10 +141,22 @@ const ServiceProviderSidebar = ({ open, onClose, user, onResignation }) => {
     >
       <Box sx={{ p: 2, bgcolor: '#003047', display: 'flex', alignItems: 'center', gap: 2 }}>
         <Avatar 
-          src={user?.profilePhoto} 
+          key={`avatar-${user?.profilePhoto || 'no-photo'}-${user?._timestamp || Date.now()}`}
+          src={user?.profilePhoto || undefined}
+          imgProps={{ 
+            crossOrigin: 'anonymous',
+            referrerPolicy: 'no-referrer',
+            onError: (e) => {
+              console.log('Failed to load profile photo, using fallback', user?.profilePhoto);
+              e.target.style.display = 'none';
+            },
+            onLoad: () => {
+              console.log('Profile photo loaded successfully:', user?.profilePhoto);
+            }
+          }}
           sx={{ bgcolor: '#E6F7F8', color: '#003047', width: 48, height: 48 }}
         >
-          {!user?.profilePhoto && (user?.fullName?.charAt(0) || 'S')}
+          {user?.fullName?.charAt(0) || 'S'}
         </Avatar>
         <Box>
           <Typography variant="h6" sx={{ color: '#E6F7F8', fontWeight: 600, fontSize: '1rem' }}>

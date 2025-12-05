@@ -140,6 +140,10 @@ const ChatSidebar = ({ contacts, selectedContact, onSelectContact, onlineUsers }
                     <Avatar
                       src={contact.profilePhoto}
                       alt={getDisplayName(contact)}
+                      imgProps={{ 
+                        crossOrigin: 'anonymous',
+                        referrerPolicy: 'no-referrer'
+                      }}
                     >
                       {getDisplayName(contact).charAt(0).toUpperCase()}
                     </Avatar>

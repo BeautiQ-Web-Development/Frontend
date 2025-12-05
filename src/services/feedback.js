@@ -101,7 +101,16 @@ export const fetchFeedbackTrends = async (period = 'month') => {
   }
 };
 
-export default {
+export const fetchAllProviderStats = async () => {
+  try {
+    const response = await api.get('/feedback/providers/stats');
+    return response.data?.data || response.data;
+  } catch (error) {
+    throw new Error(handleApiError(error));
+  }
+};
+
+const feedbackService = {
   submitFeedback,
   fetchFeedbacks,
   fetchCustomerFeedback,
@@ -109,4 +118,7 @@ export default {
   fetchServiceFeedback,
   fetchFeedbackStats,
   fetchFeedbackTrends,
+  fetchAllProviderStats,
 };
+
+export default feedbackService;

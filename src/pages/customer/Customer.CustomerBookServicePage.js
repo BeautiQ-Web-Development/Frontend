@@ -1048,7 +1048,7 @@ const CustomerBookServicePage = () => {
               </Typography>
             </Box>
             <Typography sx={{ color: '#64748b', fontWeight: 600, fontSize: '1rem' }}>
-              {new Date(selected).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+              {slotStringToDate(selected, date)?.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
             </Typography>
           </Box>
         </Box>
