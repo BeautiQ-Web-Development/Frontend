@@ -431,7 +431,7 @@ const ProfileSettingsPage = () => {
           <Divider sx={{ mb: 3 }} />
 
           {/* Profile Photo Section */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', mb: 4, width: '100%' }}>
             <Badge
               overlap="circular"
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -468,8 +468,7 @@ const ProfileSettingsPage = () => {
                 sx={{
                   width: 120,
                   height: 120,
-                  border: '4px solid #003047',
-                  mb: 1
+                  border: '4px solid #003047'
                 }}
               />
             </Badge>
@@ -747,13 +746,13 @@ const ProfileSettingsPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {/* Replace Header with AppBar */}
       <AppBar position="static" sx={{ bgcolor: '#003047' }}>
-        <Toolbar>
+        <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
           <IconButton
             edge="start"
             color="inherit"
             aria-label="menu"
             onClick={toggleSidebar}
-            sx={{ mr: 2 }}
+            sx={{ ml: 0, mr: 2 }}
           >
             <MenuIcon />
           </IconButton>

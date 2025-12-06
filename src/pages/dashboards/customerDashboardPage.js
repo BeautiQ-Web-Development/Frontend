@@ -70,7 +70,7 @@ import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/system';
 import EnhancedAppBar from '../../components/EnhancedAppBar';
 import api from '../../services/auth';
-import { fetchCustomerFeedback } from '../../services/feedback';
+import { fetchCustomerFeedback, fetchAllServiceStats } from '../../services/feedback';
 import { formatDistanceToNow } from 'date-fns';
 
 const CustomerDashboardContainer = styled(Box)(({ theme }) => ({
@@ -607,6 +607,15 @@ const CustomerDashboard = () => {
   const [feedbackByService, setFeedbackByService] = useState({});
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  
+  // All service stats (for showing ratings on service cards)
+  const [allServiceStats, setAllServiceStats] = useState({});
+  const [serviceStatsLoading, setServiceStatsLoading] = useState(false);
+  
+  // Feedback dialog state
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [selectedFeedbackService, setSelectedFeedbackService] = useState(null);
+  const [selectedFeedbackData, setSelectedFeedbackData] = useState(null);
 
   // filter option arrays
   const serviceTypes      = ['Hair Cut','Hair Style','Face Makeup','Nail Art','Saree Draping','Eye Makeup'];
@@ -624,6 +633,7 @@ const CustomerDashboard = () => {
     fetchServiceProviders();
     fetchApprovedServices();
     loadNotifications();
+    fetchAllServiceFeedbackStats(); // Fetch all service stats for rating display
   }, []);
 
   useEffect(() => {
@@ -632,6 +642,21 @@ const CustomerDashboard = () => {
     fetchCustomerBookings();
     fetchCustomerFeedbackData();
   }, [user]);
+
+  // Fetch all service feedback stats (for displaying average ratings on service cards)
+  const fetchAllServiceFeedbackStats = async () => {
+    try {
+      setServiceStatsLoading(true);
+      const stats = await fetchAllServiceStats();
+      console.log('📊 All service stats:', stats);
+      setAllServiceStats(stats || {});
+    } catch (error) {
+      console.error('Error fetching all service stats:', error);
+      setAllServiceStats({});
+    } finally {
+      setServiceStatsLoading(false);
+    }
+  };
 
   const fetchApprovedServices = async () => {
     try {
@@ -822,6 +847,7 @@ const CustomerDashboard = () => {
           neutral: stats.neutral,
           lastUpdated: stats.lastUpdated ? stats.lastUpdated.toISOString() : null,
           highlight: highlights.length > 0 ? highlights[0] : null,
+          allEntries: stats.allEntries, // Store all entries for dialog display
         };
 
         return acc;
@@ -865,6 +891,18 @@ const CustomerDashboard = () => {
     console.log('Selected service details:', service);
     setSelectedService(service);
     setDialogOpen(true);
+  };
+
+  const handleViewFeedback = (serviceName, feedbackData) => {
+    setSelectedFeedbackService(serviceName);
+    setSelectedFeedbackData(feedbackData);
+    setFeedbackDialogOpen(true);
+  };
+
+  const handleCloseFeedbackDialog = () => {
+    setFeedbackDialogOpen(false);
+    setSelectedFeedbackService(null);
+    setSelectedFeedbackData(null);
   };
 
   const formatDuration = (minutes) => {
@@ -1299,12 +1337,39 @@ const CustomerDashboard = () => {
                         if (acc) return acc;
                         return key && serviceAnalytics[key] ? serviceAnalytics[key] : null;
                       }, null);
-                      const hasFeedback = (serviceInsight?.totalFeedback || 0) > 0;
-                      const ratingValue = hasFeedback ? Number(serviceInsight?.avgRating || 0) : 0;
+                      
+                      // Get all-service stats (aggregated from all customers)
+                      const allServiceStat = serviceKeyCandidates.reduce((acc, key) => {
+                        if (acc) return acc;
+                        return key && allServiceStats[key] ? allServiceStats[key] : null;
+                      }, null);
+                      
+                      // Use allServiceStats for rating if available, otherwise fall back to serviceInsight
+                      const hasFeedback = (allServiceStat?.totalFeedbacks || serviceInsight?.totalFeedback || 0) > 0;
+                      const ratingValue = hasFeedback 
+                        ? Number(allServiceStat?.avgRating || serviceInsight?.avgRating || 0) 
+                        : 0;
                       const ratingLabel = hasFeedback ? ratingValue.toFixed(1) : 'New';
+                      const feedbackCount = allServiceStat?.totalFeedbacks || serviceInsight?.totalFeedback || 0;
                       const completionCount = serviceInsight?.completions || 0;
                       const highlight = serviceInsight?.highlight;
                       const trend = serviceInsight?.trend || 'steady';
+                      
+                      // Get feedback data for dialog - use allServiceStats which has all feedbacks
+                      const serviceFeedbackData = allServiceStat ? {
+                        avgRating: allServiceStat.avgRating,
+                        totalFeedbacks: allServiceStat.totalFeedbacks,
+                        positiveCount: allServiceStat.positiveCount,
+                        negativeCount: allServiceStat.negativeCount,
+                        neutralCount: allServiceStat.neutralCount,
+                        allEntries: (allServiceStat.feedbacks || []).map(fb => ({
+                          text: fb.text,
+                          rating: fb.rating,
+                          sentiment: fb.sentiment,
+                          submittedAt: fb.submittedAt,
+                          customerName: fb.customerName
+                        }))
+                      } : null;
 
                       return (
                         <Grid item xs={12} sm={6} md={4} key={svc._id}>
@@ -1389,12 +1454,18 @@ const CustomerDashboard = () => {
                                     }}
                                   />
                                   <Chip
-                                    label={hasFeedback ? `${serviceInsight.totalFeedback} feedback` : 'No feedback yet'}
+                                    label={hasFeedback ? `${feedbackCount} feedback` : 'No feedback yet'}
                                     size="small"
+                                    clickable={hasFeedback}
+                                    onClick={hasFeedback ? () => handleViewFeedback(svc.name, serviceFeedbackData) : undefined}
                                     sx={{
                                       backgroundColor: 'rgba(66, 153, 225, 0.1)',
                                       color: '#2b6cb0',
                                       fontWeight: 600,
+                                      cursor: hasFeedback ? 'pointer' : 'default',
+                                      '&:hover': hasFeedback ? {
+                                        backgroundColor: 'rgba(66, 153, 225, 0.2)',
+                                      } : {},
                                     }}
                                   />
                                 </Box>
@@ -1523,6 +1594,144 @@ const CustomerDashboard = () => {
         service={selectedService}
         navigate={navigate}
       />
+
+      {/* Feedback Dialog */}
+      <Dialog
+        open={feedbackDialogOpen}
+        onClose={handleCloseFeedbackDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            background: 'linear-gradient(145deg, #ffffff 0%, #f8f9ff 100%)',
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          background: 'linear-gradient(135deg, #00003f 0%, #764ba2 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <StarIcon />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Feedback for {selectedFeedbackService}
+            </Typography>
+          </Box>
+          <IconButton onClick={handleCloseFeedbackDialog} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, mt: 2 }}>
+          {selectedFeedbackData ? (
+            <>
+              {/* Summary Stats */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                <Chip
+                  label={`Average Rating: ${selectedFeedbackData.avgRating?.toFixed(1) || 'N/A'}`}
+                  icon={<StarIcon />}
+                  sx={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', color: '#f59e0b', fontWeight: 600 }}
+                />
+                <Chip
+                  label={`${selectedFeedbackData.positiveCount || 0} Positive`}
+                  sx={{ backgroundColor: 'rgba(72, 187, 120, 0.1)', color: '#276749', fontWeight: 600 }}
+                />
+                <Chip
+                  label={`${selectedFeedbackData.negativeCount || selectedFeedbackData.negative || 0} Negative`}
+                  sx={{ backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#c53030', fontWeight: 600 }}
+                />
+                <Chip
+                  label={`${selectedFeedbackData.neutralCount || selectedFeedbackData.neutral || 0} Neutral`}
+                  sx={{ backgroundColor: 'rgba(160, 174, 192, 0.1)', color: '#718096', fontWeight: 600 }}
+                />
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {/* Feedback List */}
+              {selectedFeedbackData.allEntries && selectedFeedbackData.allEntries.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {selectedFeedbackData.allEntries.map((entry, idx) => (
+                    <Paper
+                      key={idx}
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        backgroundColor: entry.rating >= 4 
+                          ? 'rgba(72, 187, 120, 0.05)' 
+                          : entry.rating <= 2 
+                            ? 'rgba(245, 101, 101, 0.05)' 
+                            : 'rgba(102, 126, 234, 0.05)',
+                        borderRadius: 3,
+                        borderLeft: `4px solid ${
+                          entry.rating >= 4 ? '#48bb78' : entry.rating <= 2 ? '#f56565' : '#667eea'
+                        }`,
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Rating value={entry.rating || 0} size="small" readOnly />
+                          {entry.sentiment && (
+                            <Chip
+                              label={entry.sentiment}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.7rem',
+                                backgroundColor: entry.sentiment === 'POSITIVE' 
+                                  ? 'rgba(72, 187, 120, 0.2)' 
+                                  : entry.sentiment === 'NEGATIVE'
+                                    ? 'rgba(245, 101, 101, 0.2)'
+                                    : 'rgba(160, 174, 192, 0.2)',
+                                color: entry.sentiment === 'POSITIVE' 
+                                  ? '#276749' 
+                                  : entry.sentiment === 'NEGATIVE'
+                                    ? '#c53030'
+                                    : '#718096',
+                              }}
+                            />
+                          )}
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {entry.customerName && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                              {entry.customerName}
+                            </Typography>
+                          )}
+                          {entry.submittedAt && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              • {formatDistanceToNow(new Date(entry.submittedAt), { addSuffix: true })}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'text.primary', lineHeight: 1.6 }}>
+                        {entry.text || 'No feedback text provided'}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                  No feedback entries available for this service.
+                </Typography>
+              )}
+            </>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+              No feedback data available.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+          <GradientButton variant="secondary" onClick={handleCloseFeedbackDialog} startIcon={<CloseIcon />}>
+            Close
+          </GradientButton>
+        </DialogActions>
+      </Dialog>
 
       <Footer />
     </CustomerDashboardContainer>

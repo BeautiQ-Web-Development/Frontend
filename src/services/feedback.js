@@ -110,6 +110,34 @@ export const fetchAllProviderStats = async () => {
   }
 };
 
+export const fetchAllServiceStats = async () => {
+  try {
+    const response = await api.get('/feedback/services/stats');
+    return response.data?.data || response.data;
+  } catch (error) {
+    throw new Error(handleApiError(error));
+  }
+};
+
+export const checkFeedbackExists = async (bookingId) => {
+  if (!bookingId) {
+    throw new Error('Booking ID is required to check feedback');
+  }
+
+  try {
+    const response = await api.get(`/feedback/booking/${bookingId}`);
+    // If feedback exists, return true
+    const feedbacks = response.data?.data || response.data || [];
+    return feedbacks.length > 0;
+  } catch (error) {
+    // If 404, feedback doesn't exist - return false
+    if (error.response?.status === 404) {
+      return false;
+    }
+    throw new Error(handleApiError(error));
+  }
+};
+
 const feedbackService = {
   submitFeedback,
   fetchFeedbacks,
@@ -119,6 +147,8 @@ const feedbackService = {
   fetchFeedbackStats,
   fetchFeedbackTrends,
   fetchAllProviderStats,
+  fetchAllServiceStats,
+  checkFeedbackExists,
 };
 
 export default feedbackService;

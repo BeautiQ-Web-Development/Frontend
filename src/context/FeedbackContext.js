@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import FeedbackRequestModal from '../components/FeedbackRequestModal';
-import { submitFeedback } from '../services/feedback';
+import { submitFeedback, checkFeedbackExists } from '../services/feedback';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
 
@@ -20,9 +20,31 @@ export const FeedbackProvider = ({ children }) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(null);
+  const [checkingFeedback, setCheckingFeedback] = useState(false);
 
-  const openFeedbackModal = useCallback((requestPayload) => {
+  const openFeedbackModal = useCallback(async (requestPayload) => {
     if (!requestPayload) return;
+
+    // Check if feedback already exists for this booking
+    if (requestPayload.bookingId) {
+      setCheckingFeedback(true);
+      try {
+        const feedbackExists = await checkFeedbackExists(requestPayload.bookingId);
+        if (feedbackExists) {
+          // Feedback already submitted - show message instead of modal
+          setSubmitError('You have already submitted feedback for this booking.');
+          setSubmitSuccess(null);
+          setCurrentRequest(requestPayload);
+          setIsModalOpen(true);
+          setCheckingFeedback(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking feedback existence:', error);
+        // Continue to open modal if check fails
+      }
+      setCheckingFeedback(false);
+    }
 
     setCurrentRequest(requestPayload);
     setSubmitError(null);
@@ -39,7 +61,15 @@ export const FeedbackProvider = ({ children }) => {
   }, [submitting]);
 
   const handleSubmit = useCallback(async ({ rating, feedback }) => {
-    if (!currentRequest || !user?.userId) {
+    // Get the user ID - can be either 'id' or 'userId' depending on context
+    const userId = user?.userId || user?.id || user?._id;
+    
+    if (!currentRequest || !userId) {
+      console.error('Missing feedback submission details:', { 
+        hasCurrentRequest: !!currentRequest, 
+        userId,
+        user 
+      });
       setSubmitError('Missing details required to submit feedback.');
       return;
     }
@@ -50,14 +80,14 @@ export const FeedbackProvider = ({ children }) => {
     try {
       const payload = {
         bookingId: currentRequest.bookingId,
-        customerId: user.userId,
+        customerId: userId,
         serviceId: currentRequest.serviceId,
         serviceName: currentRequest.serviceName,
         providerId: currentRequest.providerId,
         providerName: currentRequest.providerName,
         scheduledAt: currentRequest.scheduledAt,
         rating,
-        feedback,
+        feedbackText: feedback, // Backend expects 'feedbackText' field
         notificationId: currentRequest.notificationId,
       };
 
@@ -76,11 +106,16 @@ export const FeedbackProvider = ({ children }) => {
         setCurrentRequest(null);
       }, 1500);
     } catch (error) {
-      setSubmitError(error.message || 'Unable to submit feedback. Please try again.');
+      // Handle duplicate feedback error specifically
+      if (error.message?.includes('already submitted') || error.message?.includes('DUPLICATE_FEEDBACK')) {
+        setSubmitError('You have already submitted feedback for this booking. Each booking can only have one feedback.');
+      } else {
+        setSubmitError(error.message || 'Unable to submit feedback. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [currentRequest, notificationsApi, user?.userId]);
+  }, [currentRequest, notificationsApi, user]);
 
   const contextValue = useMemo(() => ({
     openFeedbackModal,

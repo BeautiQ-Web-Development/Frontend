@@ -24,7 +24,9 @@ import {
   DialogContentText,
   DialogActions,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Avatar,
+  Badge
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -32,8 +34,9 @@ import {
   Lock as LockIcon,
   AccountCircle as AccountCircleIcon,
   Email as EmailIcon,
+  PhotoCamera as PhotoCameraIcon
 } from '@mui/icons-material';
-import { getProfile, adminUpdateProfile, requestPasswordReset } from '../../services/auth';
+import { getProfile, adminUpdateProfile, requestPasswordReset, uploadProfilePhoto } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from '../../components/AdminSidebar';
 import Header from '../../components/Header';
@@ -58,7 +61,7 @@ function TabPanel({ children, value, index, ...other }) {
 
 const AdminProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { sidebarOpen, toggleSidebar } = useSidebar();
@@ -76,6 +79,8 @@ const AdminProfilePage = () => {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '' });
   const [passwordResetDialog, setPasswordResetDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     fetchUserProfile();
@@ -94,6 +99,70 @@ const AdminProfilePage = () => {
       console.error('Error fetching profile:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files[0];
+    
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image size must be less than 10MB');
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload the photo
+    try {
+      setUploadingPhoto(true);
+      setError('');
+      
+      const response = await uploadProfilePhoto(file);
+      
+      if (response.success) {
+        setSuccess('Profile photo updated successfully!');
+        const newPhotoUrl = response.data.profilePhoto;
+        
+        // Update the profile data with new photo URL
+        setProfileData(prev => ({
+          ...prev,
+          profilePhoto: newPhotoUrl
+        }));
+        setEditedData(prev => ({
+          ...prev,
+          profilePhoto: newPhotoUrl
+        }));
+        
+        // Update global user context
+        if (updateUser) {
+          updateUser({ profilePhoto: newPhotoUrl });
+        }
+        setSnackbarOpen(true);
+      } else {
+        setError(response.message || 'Failed to upload profile photo');
+        setPhotoPreview(null);
+      }
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      setError(err.message || 'An error occurred while uploading the photo');
+      setPhotoPreview(null);
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -290,6 +359,7 @@ const AdminProfilePage = () => {
                 value={activeTab}
                 onChange={handleTabChange}
                 aria-label="profile tabs"
+                centered
                 sx={{
                   '& .MuiTab-root': {
                     textTransform: 'none',
@@ -325,6 +395,62 @@ const AdminProfilePage = () => {
               )}
 
               <Grid container spacing={3}>
+                {/* Profile Photo Section - Centered */}
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', mb: 3, width: '100%' }}>
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      badgeContent={
+                        <IconButton
+                          component="label"
+                          sx={{
+                            bgcolor: '#003047',
+                            color: 'white',
+                            '&:hover': { bgcolor: '#004d6d' },
+                            width: 40,
+                            height: 40
+                          }}
+                          disabled={uploadingPhoto}
+                        >
+                          <PhotoCameraIcon />
+                          <input
+                            hidden
+                            accept="image/*"
+                            type="file"
+                            onChange={handlePhotoUpload}
+                          />
+                        </IconButton>
+                      }
+                    >
+                      <Avatar
+                        src={photoPreview || profileData?.profilePhoto}
+                        alt={profileData?.fullName}
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          border: '4px solid #003047',
+                          fontSize: '3rem'
+                        }}
+                      >
+                        {!profileData?.profilePhoto && profileData?.fullName?.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </Badge>
+                    {uploadingPhoto && (
+                      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={20} />
+                        <Typography variant="body2" color="text.secondary">
+                          Uploading photo...
+                        </Typography>
+                      </Box>
+                    )}
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                      Click the camera icon to update your profile photo
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ mb: 2 }} />
+                </Grid>
+
                 <Grid item xs={12}>
                   <Typography variant="h5" gutterBottom color="primary" sx={{ fontWeight: 600 }}>
                     Personal Information
