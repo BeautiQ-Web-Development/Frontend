@@ -60,14 +60,26 @@ const CustomerNotificationsPage = () => {
     }
     const normalizedType = notif.type?.toLowerCase();
     if (normalizedType === 'feedback_request' || normalizedType === 'feedback' || normalizedType === 'feedbackrequest') {
+      // Combine bookingDate and bookingTime for scheduledAt display
+      let scheduledAt = notif.data?.scheduledAt || notif.data?.slotTime;
+      if (!scheduledAt && notif.data?.bookingDate) {
+        // Format: combine bookingDate and bookingTime
+        const bookingDate = new Date(notif.data.bookingDate).toLocaleDateString();
+        const bookingTime = notif.data?.bookingTime || '';
+        scheduledAt = bookingTime ? `${bookingDate} ${bookingTime}` : bookingDate;
+      }
+      
       openFeedbackModal({
         notificationId: notif._id,
         bookingId: notif.data?.bookingId,
         serviceId: notif.data?.serviceId,
         serviceName: notif.data?.serviceName || notif.data?.service,
-        providerId: notif.data?.providerId,
+        providerId: notif.data?.providerId, // MongoDB ObjectId for submission
+        providerSerialNumber: notif.data?.providerSerialNumber, // Serial number for display (SP-XXX)
         providerName: notif.data?.providerName,
-        scheduledAt: notif.data?.scheduledAt || notif.data?.slotTime,
+        scheduledAt: scheduledAt,
+        bookingDate: notif.data?.bookingDate,
+        bookingTime: notif.data?.bookingTime,
         message: notif.message,
       });
     }

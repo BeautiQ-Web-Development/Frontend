@@ -17,13 +17,16 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  TextField
+  TextField,
+  Rating
 } from '@mui/material';
 import {
   CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
   Person as PersonIcon,
-  Business as BusinessIcon
+  Business as BusinessIcon,
+  Star as StarIcon,
+  RateReview as FeedbackIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -243,6 +246,8 @@ const AdminNotifications = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                       {notification.type === 'newCustomer' ? (
                         <PersonIcon sx={{ color: '#001F3F', mr: 1 }} />
+                      ) : notification.type === 'feedback_received' ? (
+                        <FeedbackIcon sx={{ color: '#faaf00', mr: 1 }} />
                       ) : (
                         <BusinessIcon sx={{ color: '#001F3F', mr: 1 }} />
                       )}
@@ -255,6 +260,8 @@ const AdminNotifications = () => {
                           ? 'Profile Update Request'
                           : notification.type === 'serviceProviderPasswordRequest'
                           ? 'Password Change Request'
+                          : notification.type === 'feedback_received'
+                          ? 'New Feedback Received'
                           : 'New Provider Registration'}
                       </Typography>
                     </Box>
@@ -263,23 +270,53 @@ const AdminNotifications = () => {
                       <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
                         {notification.data?.customerName || 'Unknown Name'}
                       </Typography>
+                    ) : notification.type === 'feedback_received' ? (
+                      <>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
+                          {notification.data?.serviceName || 'Unknown Service'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          {[...Array(5)].map((_, i) => (
+                            <StarIcon 
+                              key={i} 
+                              sx={{ 
+                                color: i < (notification.data?.rating || 0) ? '#faaf00' : '#e0e0e0',
+                                fontSize: 20 
+                              }} 
+                            />
+                          ))}
+                          <Chip 
+                            label={notification.data?.sentiment || 'Neutral'} 
+                            size="small"
+                            sx={{ ml: 1 }}
+                            color={
+                              notification.data?.sentiment === 'Positive' ? 'success' : 
+                              notification.data?.sentiment === 'Negative' ? 'error' : 'default'
+                            }
+                          />
+                        </Box>
+                      </>
                     ) : (
                       <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                        {notification.data?.businessName || 'Unknown Business'}
+                        {notification.data?.businessName || notification.data?.providerName || 'N/A'}
                       </Typography>
                     )}
 
                     <Typography variant="body2" sx={{ color: 'rgba(0, 31, 63, 0.7)', mb: 1 }}>
                       <PersonIcon sx={{ fontSize: 16, mr: 0.5 }} />
                       {notification.type === 'newCustomer' 
-                        ? notification.data?.customerName || 'Unknown Name'
-                        : notification.data?.providerName || 'Unknown Name'}
+                        ? notification.data?.customerName || 'N/A'
+                        : notification.type === 'feedback_received'
+                        ? notification.data?.customerName || 'Anonymous'
+                        : notification.data?.providerName || notification.data?.businessName || 'N/A'}
                     </Typography>
 
                     <Typography variant="body2" sx={{ color: 'rgba(0, 31, 63, 0.7)', mb: 2 }}>
-                      📧 {notification.type === 'newCustomer'
-                        ? notification.data?.customerEmail || 'No email'
-                        : notification.data?.providerEmail || 'No email'}
+                      {notification.type === 'feedback_received' ? '🏪' : '📧'} {notification.type === 'newCustomer'
+                        ? notification.data?.customerEmail || 'N/A'
+                        : notification.type === 'feedback_received'
+                        ? notification.data?.providerName || 'N/A'
+                        : notification.data?.providerEmail || 'N/A'}
                     </Typography>
 
                     <Typography variant="body2" sx={{ color: 'rgba(0, 31, 63, 0.7)', mb: 2 }}>
@@ -325,6 +362,8 @@ const AdminNotifications = () => {
             ? 'Profile Update Request Details'
             : selectedRequest?.type === 'serviceProviderPasswordRequest'
             ? 'Password Change Request Details'
+            : selectedRequest?.type === 'feedback_received'
+            ? 'Feedback & Rating Details'
             : 'Service Provider Registration Details'}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
@@ -353,6 +392,88 @@ const AdminNotifications = () => {
               </Grid>
               
               <Divider sx={{ my: 2 }} />
+            </>
+          ) : selectedRequest && selectedRequest.type === 'feedback_received' ? (
+            // Feedback received details
+            <>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Service</Typography>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                    {selectedRequest.data?.serviceName || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Rating</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    {[...Array(5)].map((_, i) => (
+                      <StarIcon 
+                        key={i} 
+                        sx={{ 
+                          color: i < (selectedRequest.data?.rating || 0) ? '#faaf00' : '#e0e0e0',
+                          fontSize: 28 
+                        }} 
+                      />
+                    ))}
+                    <Typography variant="h6" sx={{ ml: 1 }}>
+                      ({selectedRequest.data?.rating}/5)
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Sentiment Analysis</Typography>
+                  <Chip 
+                    label={selectedRequest.data?.sentiment || 'Neutral'} 
+                    size="medium"
+                    sx={{ mt: 0.5 }}
+                    color={
+                      selectedRequest.data?.sentiment === 'Positive' ? 'success' : 
+                      selectedRequest.data?.sentiment === 'Negative' ? 'error' : 'default'
+                    }
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedRequest.data?.customerName || 'Anonymous'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="text.secondary">Service Provider</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {selectedRequest.data?.providerName || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Feedback Preview</Typography>
+                  <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.05)', borderRadius: 1, mt: 0.5 }}>
+                    <Typography variant="body1">
+                      {selectedRequest.data?.feedbackPreview || 'No feedback text available'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Received At</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {new Date(selectedRequest.timestamp).toLocaleString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Box sx={{ textAlign: 'center' }}>
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  onClick={() => {
+                    setDetailsDialog(false);
+                    navigate('/admin/feedback');
+                  }}
+                >
+                  View Full Feedback Details
+                </Button>
+              </Box>
             </>
           ) : selectedRequest && selectedRequest.type === 'serviceProviderDeleteRequest' ? (
             // Service provider deletion request details

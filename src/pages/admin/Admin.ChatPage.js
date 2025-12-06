@@ -89,21 +89,34 @@ const AdminChatPage = () => {
                 borderColor: 'divider',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2
+                gap: 1
               }}
             >
-              {isMobile && selectedContact && (
-                <IconButton onClick={handleBackToContacts}>
-                  <ArrowBackIcon />
-                </IconButton>
-              )}
-              {isMobile && !selectedContact && (
-                <IconButton onClick={() => setChatSidebarOpen(!chatSidebarOpen)}>
+              {!isMobile && (
+                <IconButton 
+                  onClick={() => setChatSidebarOpen(!chatSidebarOpen)}
+                  edge="start"
+                  sx={{ mr: 1 }}
+                >
                   <MenuIcon />
                 </IconButton>
               )}
-              <Typography variant="h5" component="h1">
-                Chat with Service Providers
+              {isMobile && !selectedContact && (
+                <IconButton 
+                  onClick={() => setChatSidebarOpen(!chatSidebarOpen)}
+                  edge="start"
+                  sx={{ mr: 1 }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              )}
+              {isMobile && selectedContact && (
+                <IconButton onClick={handleBackToContacts} edge="start" sx={{ mr: 1 }}>
+                  <ArrowBackIcon />
+                </IconButton>
+              )}
+              <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                Chat Application
               </Typography>
             </Box>
 

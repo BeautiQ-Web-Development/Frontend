@@ -3,19 +3,24 @@ import {
   Box, Container, Typography, Paper, Grid, Rating, CircularProgress,
   Card, CardContent, Divider, Chip, Avatar, TextField, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
-  FormControl, InputLabel, Select, IconButton, Tooltip
+  FormControl, InputLabel, Select, IconButton, Tooltip, useMediaQuery, useTheme,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
 import {
   FilterList as FilterIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Visibility as ViewIcon
 } from '@mui/icons-material';
 import { fetchFeedbacks, fetchFeedbackStats } from '../../services/feedback';
 import AdminSidebar from '../../components/AdminSidebar';
+import Header from '../../components/Header';
 import { useAuth } from '../../context/AuthContext';
 
 const AdminFeedbackPage = () => {
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [loading, setLoading] = useState(true);
   const [feedbacks, setFeedbacks] = useState([]);
   const [stats, setStats] = useState(null);
@@ -27,6 +32,20 @@ const AdminFeedbackPage = () => {
   const [ratingFilter, setRatingFilter] = useState('');
   const [sentimentFilter, setSentimentFilter] = useState('');
   const [totalCount, setTotalCount] = useState(0);
+  
+  // View dialog state
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+
+  const handleViewFeedback = (feedback) => {
+    setSelectedFeedback(feedback);
+    setViewDialogOpen(true);
+  };
+
+  const handleCloseViewDialog = () => {
+    setViewDialogOpen(false);
+    setSelectedFeedback(null);
+  };
 
   useEffect(() => {
     loadData();
@@ -73,10 +92,20 @@ const AdminFeedbackPage = () => {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Header toggleSidebar={toggleSidebar} pageTitle="Feedback & Ratings" />
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
       
-      <Box sx={{ flexGrow: 1, p: 3 }}>
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          p: 3, 
+          bgcolor: '#f5f7fa',
+          transition: 'margin-left 0.3s',
+          marginLeft: sidebarOpen && !isMobile ? '240px' : 0,
+        }}
+      >
         <Container maxWidth="xl">
           <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold', color: '#003047' }}>
             Feedback & Ratings Management
@@ -174,18 +203,19 @@ const AdminFeedbackPage = () => {
                   <TableCell sx={{ color: 'white' }}>Rating</TableCell>
                   <TableCell sx={{ color: 'white' }}>Feedback</TableCell>
                   <TableCell sx={{ color: 'white' }}>Sentiment</TableCell>
+                  <TableCell sx={{ color: 'white' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
                 ) : feedbacks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                       No feedback found matching your filters.
                     </TableCell>
                   </TableRow>
@@ -201,13 +231,14 @@ const AdminFeedbackPage = () => {
                       <TableCell>
                         <Box>
                           <Typography variant="body2" fontWeight="bold">{feedback.customerName}</Typography>
-                          <Typography variant="caption" color="text.secondary">ID: {feedback.customerId}</Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Box>
                           <Typography variant="body2" fontWeight="bold">{feedback.providerName}</Typography>
-                          <Typography variant="caption" color="text.secondary">ID: {feedback.providerId}</Typography>
+                          {feedback.serviceProviderId && (
+                            <Typography variant="caption" color="text.secondary">ID: {feedback.serviceProviderId}</Typography>
+                          )}
                         </Box>
                       </TableCell>
                       <TableCell>{feedback.serviceName}</TableCell>
@@ -232,6 +263,17 @@ const AdminFeedbackPage = () => {
                           color={feedback.sentiment === 'POSITIVE' ? 'success' : feedback.sentiment === 'NEGATIVE' ? 'error' : 'default'}
                         />
                       </TableCell>
+                      <TableCell>
+                        <Tooltip title="View Details">
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            onClick={() => handleViewFeedback(feedback)}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -249,6 +291,91 @@ const AdminFeedbackPage = () => {
           </TableContainer>
         </Container>
       </Box>
+
+      {/* View Feedback Details Dialog */}
+      <Dialog 
+        open={viewDialogOpen} 
+        onClose={handleCloseViewDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: '#003047', color: 'white' }}>
+          Feedback Details
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedFeedback && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Date & Time</Typography>
+                <Typography variant="body1">
+                  {new Date(selectedFeedback.createdAt).toLocaleDateString()} at {new Date(selectedFeedback.createdAt).toLocaleTimeString()}
+                </Typography>
+              </Box>
+              
+              <Divider />
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
+                <Typography variant="body1" fontWeight="bold">{selectedFeedback.customerName}</Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Service Provider</Typography>
+                <Typography variant="body1" fontWeight="bold">{selectedFeedback.providerName}</Typography>
+                {selectedFeedback.serviceProviderId && (
+                  <Typography variant="caption" color="text.secondary">ID: {selectedFeedback.serviceProviderId}</Typography>
+                )}
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Service</Typography>
+                <Typography variant="body1">{selectedFeedback.serviceName}</Typography>
+              </Box>
+              
+              <Divider />
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Rating</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Rating value={selectedFeedback.rating} readOnly />
+                  <Typography variant="body1">({selectedFeedback.rating}/5)</Typography>
+                </Box>
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Sentiment</Typography>
+                <Chip 
+                  label={selectedFeedback.sentiment} 
+                  color={selectedFeedback.sentiment === 'POSITIVE' ? 'success' : selectedFeedback.sentiment === 'NEGATIVE' ? 'error' : 'default'}
+                />
+              </Box>
+              
+              <Divider />
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">Feedback</Typography>
+                <Paper sx={{ p: 2, bgcolor: '#f5f5f5', mt: 1 }}>
+                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {selectedFeedback.feedbackText}
+                  </Typography>
+                </Paper>
+              </Box>
+              
+              {selectedFeedback.bookingId && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">Booking ID</Typography>
+                  <Typography variant="caption">{selectedFeedback.bookingId}</Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseViewDialog} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

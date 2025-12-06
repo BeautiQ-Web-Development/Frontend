@@ -100,23 +100,40 @@ const ServiceProviderNotificationsPage = () => {
       {/* Details dialog for selected notification */}
       {selected && (
         <Dialog open onClose={handleClose} maxWidth="sm" fullWidth>
-          <DialogTitle>Booking Details</DialogTitle>
+          <DialogTitle>
+            {selected.type === 'serviceApproved' ? 'Service Approval Details' : 'Booking Details'}
+          </DialogTitle>
           <DialogContent dividers>
-            <Typography gutterBottom>
-              Customer ID: {selected.data?.customerId}
-            </Typography>
-            <Typography gutterBottom>
-              Customer Email: {selected.data?.customerEmail}
-            </Typography>
-            <Typography gutterBottom>
-              Service: {selected.data?.serviceName}
-            </Typography>
-            <Typography gutterBottom>
-              Date: {selected.data?.bookingDate || selected.data?.date ? new Date(selected.data.bookingDate || selected.data.date).toLocaleDateString() : ''}
-            </Typography>
-            <Typography gutterBottom>
-              Time: {selected.data?.bookingTime ? new Date(selected.data.bookingTime).toLocaleTimeString() : selected.data?.time || ''}
-            </Typography>
+            {selected.type === 'serviceApproved' ? (
+              // Service Approved notification - show only Service Name and Approved Date/Time
+              <>
+                <Typography gutterBottom>
+                  Service Name: {selected.data?.serviceName}
+                </Typography>
+                <Typography gutterBottom>
+                  Approved Date & Time: {new Date(selected.timestamp).toLocaleString()}
+                </Typography>
+              </>
+            ) : (
+              // Booking notification - show Customer ID, Email, Service Name, Date and Time
+              <>
+                <Typography gutterBottom>
+                  Customer ID: {selected.data?.customerIdNumber || selected.data?.customerId}
+                </Typography>
+                <Typography gutterBottom>
+                  Customer Email: {selected.data?.customerEmail}
+                </Typography>
+                <Typography gutterBottom>
+                  Service: {selected.data?.serviceName}
+                </Typography>
+                <Typography gutterBottom>
+                  Date: {selected.data?.bookingDate ? new Date(selected.data.bookingDate).toLocaleDateString() : ''}
+                </Typography>
+                <Typography gutterBottom>
+                  Time: {selected.data?.bookingTime || ''}
+                </Typography>
+              </>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="primary">Close</Button>
