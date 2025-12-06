@@ -327,18 +327,23 @@ const CustomerBookServicePage = () => {
       onClick={() => setHeadsUpOpen(false)}
       sx={{ 
         position: 'absolute', 
-        right: 12, 
-        top: 12, 
-        color: 'rgba(255,255,255,0.9)',
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        right: 8, 
+        top: 8, 
+        color: 'white',
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        border: '2px solid rgba(255,255,255,0.5)',
+        width: 36,
+        height: 36,
         '&:hover': { 
-          backgroundColor: 'rgba(255,255,255,0.2)',
+          backgroundColor: 'rgba(255,255,255,0.3)',
+          borderColor: 'white',
           transform: 'scale(1.1)'
         },
-        transition: 'all 0.2s ease'
+        transition: 'all 0.2s ease',
+        zIndex: 1
       }}
     >
-      <CloseIcon />
+      <CloseIcon sx={{ fontSize: 20 }} />
     </IconButton>
   </DialogTitle>
   

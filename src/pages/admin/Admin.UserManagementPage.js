@@ -750,6 +750,7 @@ const UserManagementAdmin = () => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Avatar 
+                              src={customer.profilePhoto}
                               sx={{ 
                                 bgcolor: customer.isActive !== false ? '#003047' : '#666',
                                 mr: 2,
@@ -757,7 +758,7 @@ const UserManagementAdmin = () => {
                                 height: 48
                               }}
                             >
-                              <PersonIcon />
+                              {!customer.profilePhoto && (customer.fullName?.charAt(0).toUpperCase() || <PersonIcon />)}
                             </Avatar>
                             <Box>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#003047' }}>
@@ -1036,6 +1037,7 @@ const UserManagementAdmin = () => {
                 <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderBottom: '1px solid #e9ecef' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                     <Avatar 
+                      src={detailsDialog.customer.profilePhoto}
                       sx={{ 
                         bgcolor: detailsDialog.customer.isActive === false ? '#666' : '#003047',
                         width: 80,
@@ -1044,7 +1046,7 @@ const UserManagementAdmin = () => {
                         boxShadow: '0 8px 24px rgba(0,48,71,0.3)'
                       }}
                     >
-                      {detailsDialog.customer.fullName?.charAt(0).toUpperCase()}
+                      {!detailsDialog.customer.profilePhoto && detailsDialog.customer.fullName?.charAt(0).toUpperCase()}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="h4" sx={{ fontWeight: 700, color: '#003047', mb: 1 }}>

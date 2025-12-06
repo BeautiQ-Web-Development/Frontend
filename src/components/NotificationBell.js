@@ -295,7 +295,8 @@ const NotificationBell = () => {
                         bookingId: notification.data?.bookingId,
                         serviceId: notification.data?.serviceId,
                         serviceName: notification.data?.serviceName || notification.data?.service,
-                        providerId: notification.data?.providerId,
+                        providerId: notification.data?.providerId, // MongoDB ObjectId for submission
+                        providerSerialNumber: notification.data?.providerSerialNumber, // Serial number for display (SP-XXX)
                         providerName: notification.data?.providerName,
                         scheduledAt: notification.data?.scheduledAt || notification.data?.slotTime,
                         message: notification.message,
