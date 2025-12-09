@@ -1,0 +1,19 @@
+# Docker Compose for LOCAL DEVELOPMENT
+# Run from parent directory: cd .. && docker-compose -f Frontend/docker-compose.yml up
+# Or copy this file to parent directory containing both Frontend and Backend folders
+
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        - REACT_APP_API_URL=http://localhost:5000/api
+        - REACT_APP_SOCKET_URL=http://localhost:5000
+        - REACT_APP_STRIPE_PUBLIC_KEY=${REACT_APP_STRIPE_PUBLIC_KEY}
+    container_name: beautiq-frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  # Backend is in separate repo: BeautiQ-Web-Development/Backend
+  # For full stack local dev, use the docker-compose.yml in parent directory
