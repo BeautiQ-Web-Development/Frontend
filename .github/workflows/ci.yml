@@ -53,7 +53,7 @@ jobs:
       - name: Build React app
         run: npm run build
         env:
-          CI: true
+          CI: false
           REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
           REACT_APP_SOCKET_URL: ${{ secrets.REACT_APP_SOCKET_URL }}
           REACT_APP_STRIPE_PUBLIC_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLIC_KEY }}
