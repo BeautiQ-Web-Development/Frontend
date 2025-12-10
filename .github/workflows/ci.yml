@@ -25,16 +25,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Verify react-scripts installation
-        run: |
-          echo "Checking for react-scripts..."
-          ls -la node_modules/.bin/ | grep react-scripts || echo "react-scripts not found in .bin"
-          npx react-scripts --version || echo "npx react-scripts failed"
+        run: npm install
 
       - name: Run tests
-        run: npx react-scripts test --watchAll=false --passWithNoTests
+        run: npm test -- --watchAll=false --passWithNoTests
         env:
           CI: true
 
@@ -54,7 +48,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build React app
         run: npm run build
@@ -111,7 +105,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run npm audit
         run: npm audit --audit-level=high
