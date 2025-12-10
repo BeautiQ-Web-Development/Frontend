@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -30,25 +27,22 @@ jobs:
             # Pull latest code
             git pull origin main
             
-            # Create/Update .env file (docker-compose reads .env by default)
-            cat > .env << 'EOF'
+            # Create/Update .env file
+            cat > .env << 'ENVEOF'
             REACT_APP_API_URL=http://${{ secrets.SERVER_HOST }}:5000/api
             REACT_APP_SOCKET_URL=http://${{ secrets.SERVER_HOST }}:5000
             REACT_APP_STRIPE_PUBLIC_KEY=${{ secrets.REACT_APP_STRIPE_PUBLIC_KEY }}
             REACT_APP_ENV=production
-            EOF
+            ENVEOF
             
             # Stop and remove old containers
-            docker-compose down
+            docker-compose down || true
             
-            # Build and start new containers (will take 3-5 minutes)
+            # Build and start new containers
             docker-compose up -d --build
             
             # Show running containers
             docker-compose ps
-            
-            # Show logs (last 50 lines)
-            docker-compose logs --tail=50
 
       - name: Verify Deployment
         uses: appleboy/ssh-action@v1.0.0
@@ -58,7 +52,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Wait for container to be ready
-            sleep 15
+            sleep 20
             
             # Check if container is running
             docker ps | grep beautiq-frontend || echo "Frontend container not found"
@@ -66,5 +60,5 @@ jobs:
             # Test frontend is accessible
             curl -f http://localhost:80 || echo "Frontend not responding"
             
-            # Show container logs if there's an issue
-            docker logs beautiq-frontend --tail=20
+            # Show container logs
+            docker logs beautiq-frontend --tail=30 || echo "Cannot get logs"
