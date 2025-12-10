@@ -27,8 +27,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify react-scripts installation
+        run: |
+          echo "Checking for react-scripts..."
+          ls -la node_modules/.bin/ | grep react-scripts || echo "react-scripts not found in .bin"
+          npx react-scripts --version || echo "npx react-scripts failed"
+
       - name: Run tests
-        run: npm test -- --watchAll=false --passWithNoTests
+        run: npx react-scripts test --watchAll=false --passWithNoTests
         env:
           CI: true
 
